@@ -12,6 +12,7 @@ import Footer from "./components/Footer";
 import Home from './components/home'
 import LoginPage from './components/Login'
 import RegisterPage from './components/Register'
+import BookAdminDashboard from './components/AdminBook'
 
 function App() {
   return (
@@ -28,7 +29,7 @@ function App() {
         <Route path="/Whishlist" element={<Whishlist />} />
         <Route path="/Login" element={<LoginPage />} />
         <Route path="/Register" element={<RegisterPage/>} />
-
+        <Route path="/AdminBook" element={<BookAdminDashboard/>} />
       </Routes>
       <Footer />
     </Router>
