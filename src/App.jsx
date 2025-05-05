@@ -1,22 +1,15 @@
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import './App.css'
-import Home from './pages/home'
-import ShoppingCart from './pages/Cart'
-import OrderHistory from './pages/OrderHistory'
-import LibraryUserProfile from './pages/UserProfile'
+import ShoppingCart from './components/Cart'
+import OrderHistory from './components/OrderHistory'
 import ProductPage from './components/ProductPage'
 import Whishlist from './components/Whishlist'
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import "./App.css";
-import Home from "./pages/home";
-import ShoppingCart from "./pages/Cart";
-import OrderHistory from "./pages/OrderHistory";
-import LibraryUserProfile from "./pages/UserProfile";
+import LibraryUserProfile from "./components/UserProfile";
 import AboutUs from "./components/AboutUs";
 import ContactUs from "./components/ContactUs";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import Home from './components/home'
 
 function App() {
   return (
@@ -29,6 +22,8 @@ function App() {
         <Route path="/userprofile" element={<LibraryUserProfile />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/contact-us" element={<ContactUs />} />
+        <Route path="/ProductPage" element={<ProductPage />} />
+        <Route path="/Whishlist" element={<Whishlist />} />
       </Routes>
       <Footer />
     </Router>

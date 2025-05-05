@@ -8,7 +8,7 @@ import {
   FaRegBookmark,
   FaBookmark
 } from 'react-icons/fa';
-import Header from '../components/Header';
+import Header from './Header';
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState('featured');
