@@ -9,7 +9,6 @@ import {
   FaBookmark
 } from 'react-icons/fa';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState('featured');
@@ -183,7 +182,6 @@ const Home = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <Header />
 
       {/* Hero Banner */}
       <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 mb-12 shadow-inner">
@@ -388,7 +386,6 @@ const Home = () => {
         </section>
       </div>
       
-      <Footer />
     </div>
   );
 };
