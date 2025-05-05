@@ -10,6 +10,8 @@ import ContactUs from "./components/ContactUs";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Home from './components/home'
+import LoginPage from './components/Login'
+import RegisterPage from './components/Register'
 
 function App() {
   return (
@@ -24,6 +26,9 @@ function App() {
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/ProductPage" element={<ProductPage />} />
         <Route path="/Whishlist" element={<Whishlist />} />
+        <Route path="/Login" element={<LoginPage />} />
+        <Route path="/Register" element={<RegisterPage/>} />
+
       </Routes>
       <Footer />
     </Router>
