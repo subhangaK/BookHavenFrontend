@@ -1,3 +1,12 @@
+
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import './App.css'
+import Home from './pages/home'
+import ShoppingCart from './pages/Cart'
+import OrderHistory from './pages/OrderHistory'
+import LibraryUserProfile from './pages/UserProfile'
+import ProductPage from './components/ProductPage'
+import Whishlist from './components/Whishlist'
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Home from "./pages/home";
