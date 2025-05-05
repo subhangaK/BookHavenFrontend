@@ -62,7 +62,7 @@ export default function RegisterPage() {
         confirmPassword: data.confirmPassword,
       };
       console.log('Sending request with payload:', payload);
-      const response = await axios.post('http://127.0.0.1:7189/api/auth/register', payload);
+      const response = await axios.post('https://localhost:7189/api/auth/register', payload);
       console.log('Response:', response.data);
       toast.success('Registration successful! Please log in.', { position: 'top-right', autoClose: 3000 });
       navigate('/Login');

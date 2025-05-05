@@ -37,7 +37,7 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await axios.post('http://localhost:7189/api/auth/login', data);
+      const response = await axios.post('https:/localhost:7189/api/auth/login', data);
       const { token } = response.data;
       login(token); // Update auth context
       toast.success('Login successful!', { position: 'top-right', autoClose: 3000 });

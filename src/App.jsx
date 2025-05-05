@@ -14,6 +14,7 @@ import RegisterPage from './components/Register';
 import { AuthProvider } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import AdminBook from './components/AdminBook'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/Whishlist" element={<Whishlist />} />
           <Route path="/Login" element={<LoginPage />} />
           <Route path="/Register" element={<RegisterPage />} />
+          <Route path="/AdminBook" element={<AdminBook />} />
         </Routes>
         <Footer />
         <ToastContainer />
