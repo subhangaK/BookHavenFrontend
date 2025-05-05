@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { FaSearch, FaHeart, FaShoppingCart, FaUserCircle } from 'react-icons/fa';
-import { Link } from 'react-router-dom'; // Ensure this is from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const Header = () => {
   const [searchFocused, setSearchFocused] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false); // State for dropdown visibility
+  const { user, logout } = useContext(AuthContext); // Access AuthContext for user and logout
+  const navigate = useNavigate();
 
   const HeaderSearchBar = () => (
     <div className={`relative ${searchFocused ? 'flex-grow' : ''}`}>
@@ -19,6 +24,13 @@ const Header = () => {
       <FaSearch className="absolute left-3 top-3 text-gray-400" />
     </div>
   );
+
+  const handleLogout = () => {
+    logout(); // Call logout from AuthContext
+    toast.success('Logged out successfully!', { position: 'top-right', autoClose: 3000 });
+    setDropdownOpen(false); // Close dropdown
+    navigate('/'); // Redirect to homepage
+  };
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -72,9 +84,44 @@ const Header = () => {
                 </span>
               </button>
 
-              <button className="text-gray-600 hover:text-blue-600 transition duration-300">
-                <FaUserCircle className="text-xl" />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="text-gray-600 hover:text-blue-600 transition duration-300"
+                >
+                  <FaUserCircle className="text-xl" />
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50">
+                    {user ? (
+                      <>
+                        <Link
+                          to="/userprofile"
+                          className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          View Profile
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
+                        >
+                          Log Out
+                        </button>
+                      </>
+                    ) : (
+                      <Link
+                        to="/Login"
+                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Log In
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
