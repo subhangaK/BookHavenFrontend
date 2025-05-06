@@ -1,50 +1,41 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import {
-  FaHeart,
-  FaShoppingCart,
-  FaTrashAlt,
-  FaStore,
-  FaSadTear,
-} from "react-icons/fa";
-import ProductCard, { FavoritesProvider } from "./ProductCard";
+import { FaShoppingCart, FaTrashAlt, FaStore, FaSadTear } from "react-icons/fa";
+import { FavoritesProvider } from "./ProductCard";
 
-const Wishlist = () => {
-  const [wishlistBooks, setWishlistBooks] = useState([]);
+const Order = () => {
+  const [orderBooks, setOrderBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchWishlist = async () => {
+    const fetchOrder = async () => {
       setIsLoading(true);
       setError(null);
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-          setError("Please log in to view your wishlist");
-          setWishlistBooks([]);
+          setError("Please log in to view your order");
+          setOrderBooks([]);
           return;
         }
 
-        const response = await axios.get(
-          "https://localhost:7189/api/Wishlist",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "*/*",
-            },
-          }
-        );
+        const response = await axios.get("https://localhost:7189/api/Order", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
+        });
 
         if (!Array.isArray(response.data)) {
           console.error("Expected an array, got:", response.data);
-          setWishlistBooks([]);
-          setError("Invalid wishlist data received");
+          setOrderBooks([]);
+          setError("Invalid order data received");
           return;
         }
 
-        setWishlistBooks(
+        setOrderBooks(
           response.data.map((book) => ({
             id: book.id,
             title: book.title,
@@ -54,25 +45,25 @@ const Wishlist = () => {
           }))
         );
       } catch (error) {
-        console.error("Error fetching wishlist:", error);
+        console.error("Error fetching order:", error);
         if (error.response?.status === 401) {
           setError("Session expired. Please log in again.");
           localStorage.removeItem("token");
         } else {
-          setError("Failed to load wishlist. Please try again.");
+          setError("Failed to load order. Please try again.");
         }
-        setWishlistBooks([]);
+        setOrderBooks([]);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchWishlist();
+    fetchOrder();
   }, []);
 
-  const removeFromWishlist = async (bookId) => {
+  const removeFromOrder = async (bookId) => {
     if (
       !window.confirm(
-        "Are you sure you want to remove this book from your wishlist?"
+        "Are you sure you want to remove this book from your order?"
       )
     ) {
       return;
@@ -81,43 +72,40 @@ const Wishlist = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        setError("Please log in to manage your wishlist");
+        setError("Please log in to manage your order");
         return;
       }
 
-      await axios.delete(
-        `https://localhost:7189/api/Wishlist/remove/${bookId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
-        }
-      );
-      setWishlistBooks((prev) => prev.filter((book) => book.id !== bookId));
+      await axios.delete(`https://localhost:7189/api/Order/remove/${bookId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "*/*",
+        },
+      });
+      setOrderBooks((prev) => prev.filter((book) => book.id !== bookId));
     } catch (error) {
-      console.error("Error removing from wishlist:", error);
+      console.error("Error removing from order:", error);
       if (error.response?.status === 401) {
         setError("Session expired. Please log in again.");
         localStorage.removeItem("token");
       } else if (error.response?.status === 404) {
-        setError("Book not found in wishlist.");
+        setError("Book not found in order.");
       } else {
-        setError("Failed to remove book from wishlist.");
+        setError("Failed to remove book from order.");
       }
     }
   };
 
-  const addToCart = async (bookId) => {
+  const addToOrder = async (bookId) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        setError("Please log in to add items to your cart");
+        setError("Please log in to add items to your order");
         return;
       }
 
       await axios.post(
-        "https://localhost:7189/api/Cart/add",
+        "https://localhost:7189/api/Order/add",
         { bookId: bookId },
         {
           headers: {
@@ -127,16 +115,16 @@ const Wishlist = () => {
           },
         }
       );
-      alert("Book added to cart successfully!");
+      alert("Book added to order successfully!");
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      console.error("Error adding to order:", error);
       if (error.response?.status === 401) {
         setError("Session expired. Please log in again.");
         localStorage.removeItem("token");
       } else if (error.response?.status === 400) {
-        setError("Book already in cart or invalid request.");
+        setError("Book already in order or invalid request.");
       } else {
-        setError("Failed to add book to cart. Please try again.");
+        setError("Failed to add book to order. Please try again.");
       }
     }
   };
@@ -144,19 +132,18 @@ const Wishlist = () => {
   return (
     <FavoritesProvider>
       <div className="min-h-screen bg-gray-50">
-
         <main className="container mx-auto py-8 px-4">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
-              <FaHeart className="text-red-500 mr-3" size={24} />
-              <h1 className="text-2xl font-bold text-gray-800">My Wishlist</h1>
+              <FaShoppingCart className="text-indigo-600 mr-3" size={24} />
+              <h1 className="text-2xl font-bold text-gray-800">My Order</h1>
             </div>
             <Link
-              to="/cart"
+              to="/books"
               className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium"
             >
-              <FaShoppingCart className="mr-2" />
-              View Cart
+              <FaStore className="mr-2" />
+              Browse Books
             </Link>
           </div>
 
@@ -164,7 +151,7 @@ const Wishlist = () => {
             <div className="flex justify-center items-center py-32">
               <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-600"></div>
               <span className="ml-3 text-gray-600 font-medium">
-                Loading your wishlist...
+                Loading your order...
               </span>
             </div>
           )}
@@ -193,15 +180,15 @@ const Wishlist = () => {
             </div>
           )}
 
-          {!isLoading && !error && wishlistBooks.length === 0 ? (
+          {!isLoading && !error && orderBooks.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
               <div className="flex flex-col items-center justify-center py-12">
                 <FaSadTear size={64} className="text-gray-300 mb-4" />
                 <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                  Your wishlist is empty
+                  Your order is empty
                 </h3>
                 <p className="text-gray-500 mb-6 max-w-md">
-                  You haven't added any books to your wishlist yet. Browse our
+                  You haven't added any books to your order yet. Browse our
                   collection and add your favorites!
                 </p>
                 <Link
@@ -215,16 +202,12 @@ const Wishlist = () => {
             </div>
           ) : (
             <>
-              {/* Wishlist items count summary */}
-              {!isLoading && !error && wishlistBooks.length > 0 && (
+              {!isLoading && !error && orderBooks.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">
-                      <span className="font-medium">
-                        {wishlistBooks.length}
-                      </span>{" "}
-                      {wishlistBooks.length === 1 ? "item" : "items"} in your
-                      wishlist
+                      <span className="font-medium">{orderBooks.length}</span>{" "}
+                      {orderBooks.length === 1 ? "item" : "items"} in your order
                     </span>
                     <Link
                       to="/"
@@ -236,14 +219,12 @@ const Wishlist = () => {
                 </div>
               )}
 
-              {/* Wishlist grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {wishlistBooks.map((book) => (
+                {orderBooks.map((book) => (
                   <div
                     key={book.id}
                     className="bg-white rounded-lg shadow-sm border overflow-hidden"
                   >
-                    {/* Book image */}
                     <div className="relative h-48 overflow-hidden bg-gray-100">
                       {book.imagePath ? (
                         <img
@@ -257,15 +238,14 @@ const Wishlist = () => {
                         </div>
                       )}
                       <button
-                        onClick={() => removeFromWishlist(book.id)}
+                        onClick={() => removeFromOrder(book.id)}
                         className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm hover:bg-red-50 transition-colors"
-                        title="Remove from wishlist"
+                        title="Remove from order"
                       >
                         <FaTrashAlt className="text-red-500" size={16} />
                       </button>
                     </div>
 
-                    {/* Book info */}
                     <div className="p-4">
                       <Link to={`/book/${book.id}`} className="block">
                         <h3 className="font-medium text-gray-900 mb-1 hover:text-indigo-600 transition-colors line-clamp-1">
@@ -291,11 +271,11 @@ const Wishlist = () => {
                       </div>
 
                       <button
-                        onClick={() => addToCart(book.id)}
+                        onClick={() => addToOrder(book.id)}
                         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded flex items-center justify-center transition-colors"
                       >
                         <FaShoppingCart className="mr-2" size={16} />
-                        Add to Cart
+                        Add to Order
                       </button>
                     </div>
                   </div>
@@ -303,57 +283,10 @@ const Wishlist = () => {
               </div>
             </>
           )}
-=======
-  return (
-    <FavoritesProvider>
-      <div className="bg-gray-100 min-h-screen">
-        <main className="container mx-auto py-8 px-4">
-          <h2 className="text-2xl font-bold mb-6">Wishlist</h2>
-
-          {isLoading && <p className="text-gray-600">Loading wishlist...</p>}
-
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-
-          {!isLoading && !error && wishlistBooks.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">Your wishlist is empty.</p>
-              <Link
-                to="/"
-                className="bg-indigo-500 text-white rounded py-2 px-4 hover:bg-indigo-600 transition"
-              >
-                Browse Books
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {wishlistBooks.map((book) => (
-                <div
-                  key={book.id}
-                  className="bg-white shadow-sm rounded overflow-hidden"
-                >
-                  <ProductCard
-                    id={book.id}
-                    title={book.title}
-                    author={book.author}
-                    price={book.price}
-                    image={book.imagePath || "/api/placeholder/240/160"}
-                  />
-                  <div className="p-4 pt-0">
-                    <button
-                      className="w-full bg-indigo-500 text-white rounded py-2 hover:bg-indigo-600 transition"
-                      onClick={() => removeFromWishlist(book.id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </main>
       </div>
     </FavoritesProvider>
   );
 };
 
-export default Wishlist;
+export default Order;

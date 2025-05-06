@@ -1,217 +1,482 @@
-import { useState, useEffect } from "react";
-import { 
-  FiShoppingCart, 
-  FiMinus, 
-  FiPlus, 
-  FiX, 
-  FiChevronLeft 
-} from "react-icons/fi";
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import {
+  FaShoppingCart,
+  FaTrashAlt,
+  FaArrowLeft,
+  FaHeart,
+  FaLock,
+  FaTag,
+  FaTruck,
+} from "react-icons/fa";
+import ProductCard, { FavoritesProvider } from "./ProductCard";
 
-const ShoppingCart = () => {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      title: "A Court of Thorns and Roses",
-      author: "Sarah J. Maas",
-      price: 100,
-      quantity: 2,
-      image: "/api/placeholder/120/180",
-    },
-    {
-      id: 2,
-      title: "The Song of Achilles",
-      author: "Madeline Miller",
-      price: 120,
-      quantity: 1,
-      image: "/api/placeholder/120/180",
-    },
-    {
-      id: 3,
-      title: "The Seven Husbands of Evelyn Hugo",
-      author: "Taylor Jenkins Reid",
-      price: 150,
-      quantity: 1,
-      image: "/api/placeholder/120/180",
-    }
-  ]);
-
-  const [animateTotal, setAnimateTotal] = useState(false);
-
-  const updateQuantity = (id, change) => {
-    setItems(
-      items.map((item) =>
-        item.id === id && item.quantity + change > 0
-          ? { ...item, quantity: item.quantity + change }
-          : item
-      )
-    );
-    setAnimateTotal(true);
-  };
-
-  const removeItem = (id) => {
-    setItems(items.filter(item => item.id !== id));
-    setAnimateTotal(true);
-  };
+const Checkout = () => {
+  const [cartBooks, setCartBooks] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [promoCode, setPromoCode] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (animateTotal) {
-      const timer = setTimeout(() => setAnimateTotal(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [animateTotal]);
+    const fetchCart = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setError("Please log in to view your cart");
+          setCartBooks([]);
+          return;
+        }
 
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 500 ? "Free" : 50;
-  const total = typeof shipping === "number" ? subtotal + shipping : subtotal;
+        const response = await axios.get("https://localhost:7189/api/Cart", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
+        });
+
+        if (!Array.isArray(response.data)) {
+          console.error("Expected an array, got:", response.data);
+          setCartBooks([]);
+          setError("Invalid cart data received");
+          return;
+        }
+
+        setCartBooks(
+          response.data.map((book) => ({
+            id: book.id,
+            title: book.title,
+            author: book.author,
+            price: book.price,
+            imagePath: book.imagePath,
+            quantity: 1, // Default quantity
+          }))
+        );
+      } catch (error) {
+        console.error("Error fetching cart:", error);
+        if (error.response?.status === 401) {
+          setError("Session expired. Please log in again.");
+          localStorage.removeItem("token");
+          navigate("/login");
+        } else {
+          setError("Failed to load cart. Please try again.");
+        }
+        setCartBooks([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCart();
+  }, [navigate]);
+
+  const removeFromCart = async (bookId) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to remove this book from your cart?"
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Please log in to manage your cart");
+        return;
+      }
+
+      await axios.delete(`https://localhost:7189/api/Cart/remove/${bookId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "*/*",
+        },
+      });
+      setCartBooks((prev) => prev.filter((book) => book.id !== bookId));
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+      if (error.response?.status === 401) {
+        setError("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else if (error.response?.status === 404) {
+        setError("Book not found in cart.");
+      } else {
+        setError("Failed to remove book from cart.");
+      }
+    }
+  };
+
+  const updateQuantity = (bookId, newQuantity) => {
+    if (newQuantity < 1) return;
+    setCartBooks((prev) =>
+      prev.map((book) =>
+        book.id === bookId ? { ...book, quantity: newQuantity } : book
+      )
+    );
+  };
+
+  const addToWishlist = async (bookId) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Please log in to manage your wishlist");
+        return;
+      }
+
+      await axios.post(
+        "https://localhost:7189/api/Wishlist/add",
+        { bookId: bookId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
+      alert("Book added to wishlist successfully!");
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+      if (error.response?.status === 401) {
+        setError("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else if (error.response?.status === 400) {
+        alert("Book already in wishlist.");
+      } else {
+        setError("Failed to add book to wishlist.");
+      }
+    }
+  };
+
+  const subtotal = cartBooks.reduce(
+    (sum, book) => sum + book.price * book.quantity,
+    0
+  );
+
+  const shipping = subtotal > 50 ? 0 : 4.99;
+  const tax = subtotal * 0.07; // 7% tax
+  const totalPrice = (subtotal + shipping + tax).toFixed(2);
+  const subtotalFormatted = subtotal.toFixed(2);
+  const shippingFormatted = shipping.toFixed(2);
+  const taxFormatted = tax.toFixed(2);
+
+  const handleCheckout = () => {
+    if (cartBooks.length === 0) {
+      alert("Your cart is empty. Add items to proceed with checkout.");
+      return;
+    }
+    alert("Proceeding to payment processing...");
+    // Add logic for payment processing or redirect to payment gateway here
+  };
+
+  const handleApplyPromo = (e) => {
+    e.preventDefault();
+    alert(`Promo code "${promoCode}" applied!`);
+    setPromoCode("");
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-
-      <div className="max-w-5xl mx-auto py-10 px-4">
-        <div className="flex items-center mb-6 text-gray-500 hover:text-gray-800 transition-colors">
-          <FiChevronLeft size={18} />
-          <a href="#" className="ml-2 text-sm">Continue Shopping</a>
+    <FavoritesProvider>
+      <div className="bg-gray-50 min-h-screen">
+        {/* Breadcrumb navigation */}
+        <div className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-3">
+            <nav className="flex text-sm">
+              <Link to="/" className="text-gray-500 hover:text-indigo-600">
+                Home
+              </Link>
+              <span className="mx-2 text-gray-400">/</span>
+              <span className="font-medium text-gray-800">Shopping Cart</span>
+            </nav>
+          </div>
         </div>
-        
-        <div className="flex flex-col lg:flex-row lg:space-x-8">
-          <div className="flex-1">
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center">
-                  <FiShoppingCart className="mr-3" size={20} />
-                  <h1 className="text-xl font-medium text-gray-800">Your Shopping Bag</h1>
-                  <span className="ml-auto bg-gray-100 text-gray-800 font-medium text-sm py-1 px-3 rounded-full">
-                    {items.length} Items
-                  </span>
+
+        <main className="container mx-auto py-8 px-4">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center">
+              <FaShoppingCart className="text-indigo-600 mr-3" size={24} />
+              <h1 className="text-2xl font-bold text-gray-800">
+                Your Shopping Cart
+              </h1>
+            </div>
+            <Link
+              to="/"
+              className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              <FaArrowLeft className="mr-2" />
+              Continue Shopping
+            </Link>
+          </div>
+
+          {isLoading && (
+            <div className="flex justify-center items-center py-32">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-600"></div>
+              <span className="ml-3 text-gray-600 font-medium">
+                Loading your cart...
+              </span>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-red-800">{error}</p>
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="px-6 py-3 border-b border-gray-100 hidden md:flex text-sm font-medium text-gray-500">
-                <div className="w-2/5">Item</div>
-                <div className="w-1/5 text-center">Price</div>
-                <div className="w-1/5 text-center">Quantity</div>
-                <div className="w-1/5 text-right">Total</div>
+          {!isLoading && !error && cartBooks.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+              <div className="flex flex-col items-center justify-center py-12">
+                <FaShoppingCart size={64} className="text-gray-300 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                  Your cart is empty
+                </h3>
+                <p className="text-gray-500 mb-6 max-w-md">
+                  Looks like you haven't added any books to your cart yet. Start
+                  shopping and find your next favorite read!
+                </p>
+                <Link
+                  to="/"
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Browse Books
+                </Link>
               </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col lg:flex-row gap-8">
+                {/* Cart Items */}
+                <div className="lg:w-2/3">
+                  <div className="bg-white rounded-lg shadow-sm border overflow-hidden mb-6">
+                    <div className="border-b px-6 py-4">
+                      <h2 className="font-semibold text-lg text-gray-800">
+                        Cart Items ({cartBooks.length})
+                      </h2>
+                    </div>
 
-              <div className="divide-y divide-gray-100">
-                {items.map((item) => (
-                  <div key={item.id} className="px-6 py-5 group">
-                    <div className="flex flex-col md:flex-row md:items-center">
-                      <div className="flex flex-1 md:w-2/5">
-                        <div className="flex-shrink-0 rounded-md overflow-hidden shadow-sm">
-                          <img
-                            src={item.image}
-                            alt={item.title}
-                            className="h-28 w-20 object-cover"
-                          />
-                        </div>
-                        <div className="ml-4 flex flex-col justify-center">
-                          <h3 className="text-base font-medium text-gray-800">{item.title}</h3>
-                          <p className="text-sm text-gray-500">{item.author}</p>
-                          <button 
-                            onClick={() => removeItem(item.id)}
-                            className="flex items-center mt-2 text-xs text-gray-400 hover:text-gray-600"
-                          >
-                            <FiX size={14} className="mr-1" />
-                            Remove
-                          </button>
+                    {cartBooks.map((book) => (
+                      <div key={book.id} className="border-b last:border-0">
+                        <div className="p-6 flex flex-col sm:flex-row">
+                          {/* Book image */}
+                          <div className="w-full sm:w-24 h-24 mb-4 sm:mb-0 flex-shrink-0">
+                            {book.imagePath ? (
+                              <img
+                                src={`https://localhost:7189${book.imagePath}`}
+                                alt={book.title}
+                                className="w-full h-full object-cover rounded"
+                              />
+                            ) : (
+                              <div className="w-24 h-24 bg-gray-100 rounded flex items-center justify-center">
+                                <span className="text-xs text-gray-500">
+                                  No image
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Book details */}
+                          <div className="flex-grow sm:ml-6">
+                            <div className="flex flex-col sm:flex-row justify-between">
+                              <div>
+                                <Link
+                                  to={`/book/${book.id}`}
+                                  className="font-medium text-gray-900 hover:text-indigo-600 transition-colors"
+                                >
+                                  {book.title}
+                                </Link>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  by {book.author}
+                                </p>
+                                <p className="text-sm text-green-600 mt-1">
+                                  In Stock
+                                </p>
+                              </div>
+                              <div className="mt-4 sm:mt-0 text-right">
+                                <div className="font-bold text-gray-900">
+                                  ${book.price.toFixed(2)}
+                                </div>
+                                <div className="text-sm text-gray-500 line-through">
+                                  ${(book.price * 1.2).toFixed(2)}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4">
+                              {/* Quantity selector */}
+                              <div className="flex items-center mb-4 sm:mb-0">
+                                <span className="text-sm text-gray-600 mr-3">
+                                  Qty:
+                                </span>
+                                <div className="flex items-center border rounded">
+                                  <button
+                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                    onClick={() =>
+                                      updateQuantity(book.id, book.quantity - 1)
+                                    }
+                                  >
+                                    -
+                                  </button>
+                                  <span className="px-3 py-1 text-gray-800">
+                                    {book.quantity}
+                                  </span>
+                                  <button
+                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                    onClick={() =>
+                                      updateQuantity(book.id, book.quantity + 1)
+                                    }
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="flex space-x-3">
+                                <button
+                                  onClick={() => addToWishlist(book.id)}
+                                  className="text-sm text-gray-700 hover:text-indigo-600 flex items-center"
+                                >
+                                  <FaHeart className="mr-1" />
+                                  Save for later
+                                </button>
+                                <button
+                                  onClick={() => removeFromCart(book.id)}
+                                  className="text-sm text-red-600 hover:text-red-800 flex items-center"
+                                >
+                                  <FaTrashAlt className="mr-1" />
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </div>
 
-                      <div className="md:w-1/5 flex md:justify-center items-center mt-4 md:mt-0">
-                        <span className="font-medium text-gray-800">₹{item.price}</span>
-                      </div>
+                {/* Order Summary */}
+                <div className="lg:w-1/3">
+                  <div className="bg-white rounded-lg shadow-sm border overflow-hidden sticky top-6">
+                    <div className="border-b px-6 py-4">
+                      <h2 className="font-semibold text-lg text-gray-800">
+                        Order Summary
+                      </h2>
+                    </div>
 
-                      <div className="md:w-1/5 flex md:justify-center items-center mt-4 md:mt-0">
-                        <div className="flex items-center border border-gray-200 rounded-md">
+                    <div className="p-6">
+                      {/* Promo code */}
+                      <form onSubmit={handleApplyPromo} className="mb-6">
+                        <div className="flex items-center">
+                          <div className="relative flex-grow">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FaTag className="text-gray-400" />
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Promo code"
+                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                              value={promoCode}
+                              onChange={(e) => setPromoCode(e.target.value)}
+                            />
+                          </div>
                           <button
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700"
+                            type="submit"
+                            className="ml-2 bg-indigo-600 text-white px-4 py-2 text-sm font-medium rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           >
-                            <FiMinus size={14} />
+                            Apply
                           </button>
-                          <span className="w-8 text-center font-medium">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700"
-                          >
-                            <FiPlus size={14} />
-                          </button>
+                        </div>
+                      </form>
+
+                      {/* Price breakdown */}
+                      <div className="border-b pb-4">
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-600">Subtotal</span>
+                          <span className="text-gray-800">
+                            ${subtotalFormatted}
+                          </span>
+                        </div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-600">Shipping</span>
+                          <span className="text-gray-800">
+                            {shipping === 0 ? (
+                              <span className="text-green-600">Free</span>
+                            ) : (
+                              `$${shippingFormatted}`
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-600">Tax (7%)</span>
+                          <span className="text-gray-800">${taxFormatted}</span>
                         </div>
                       </div>
 
-                      <div className="md:w-1/5 flex md:justify-end items-center mt-4 md:mt-0">
-                        <span className="font-medium text-gray-800">₹{item.price * item.quantity}</span>
+                      {/* Total */}
+                      <div className="pt-4 mb-6">
+                        <div className="flex justify-between">
+                          <span className="text-lg font-bold text-gray-800">
+                            Total
+                          </span>
+                          <span className="text-lg font-bold text-gray-800">
+                            ${totalPrice}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Checkout button */}
+                      <button
+                        className="w-full bg-indigo-600 text-white py-3 rounded-md font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center"
+                        onClick={handleCheckout}
+                      >
+                        <FaLock className="mr-2" />
+                        Proceed to Checkout
+                      </button>
+
+                      {/* Additional info */}
+                      <div className="mt-6 text-sm text-gray-500">
+                        <div className="flex items-center mb-2">
+                          <FaTruck className="mr-2 text-gray-400" />
+                          <span>Free shipping on orders over $50</span>
+                        </div>
+                        <div className="flex items-center">
+                          <FaLock className="mr-2 text-gray-400" />
+                          <span>Secure checkout with SSL encryption</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 lg:mt-0 lg:w-80">
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-medium text-gray-800">Order Summary</h2>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium">₹{subtotal}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Shipping</span>
-                    <span className={shipping === "Free" ? "text-gray-800 font-medium" : "font-medium"}>
-                      {shipping === "Free" ? shipping : `₹${shipping}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tax</span>
-                    <span className="font-medium">Included</span>
-                  </div>
-                  <div className="border-t pt-4 flex justify-between items-center">
-                    <span className="font-medium text-gray-800">Total</span>
-                    <span className={`font-medium text-lg ${animateTotal ? "text-gray-600" : "text-gray-800"}`}>
-                      ₹{total}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="flex">
-                    <input 
-                      type="text" 
-                      className="flex-1 border border-gray-200 rounded-l-md px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
-                      placeholder="Coupon code"
-                    />
-                    <button className="bg-gray-100 text-gray-800 px-4 py-2 rounded-r-md font-medium text-sm hover:bg-gray-200 transition-colors">
-                      Apply
-                    </button>
-                  </div>
-                </div>
-
-                <button className="w-full mt-6 py-3 px-4 rounded-md bg-gray-800 hover:bg-gray-900 text-white font-medium transition-colors flex items-center justify-center">
-                  <FiShoppingCart size={16} className="mr-2" />
-                  Checkout
-                </button>
-
-                <div className="mt-5 flex items-center justify-center text-xs text-gray-500">
-                  <span>100% Secure Checkout</span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+            </>
+          )}
+        </main>
       </div>
-      
-      <Footer />
-    </div>
+    </FavoritesProvider>
   );
 };
 
-export default ShoppingCart;
+export default Checkout;

@@ -18,6 +18,11 @@ export default function ProductPage() {
         const books = await response.json();
         // Map backend book data to match ProductCard props
         const formattedBooks = books.map((book) => ({
+          id: book.id.toString(),
+          title: book.title,
+          author: book.author,
+          price: book.price,
+          imagePath: book.imagePath,
           id: book.id.toString(), // Convert to string to match ProductCard key type
           title: book.title,
           author: book.author,
@@ -142,7 +147,7 @@ export default function ProductPage() {
                     title={book.title}
                     author={book.author}
                     price={book.price}
-                    image={book.image}
+                    imagePath={book.imagePath}
                   />
                 ))}
               </div>
