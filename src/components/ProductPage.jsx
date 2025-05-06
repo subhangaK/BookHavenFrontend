@@ -23,11 +23,7 @@ export default function ProductPage() {
           author: book.author,
           price: book.price,
           imagePath: book.imagePath,
-          id: book.id.toString(), // Convert to string to match ProductCard key type
-          title: book.title,
-          author: book.author,
-          price: book.price,
-          image: book.imagePath || "/api/placeholder/240/240", // Fallback image if none provided
+          
         }));
         setAllProducts(formattedBooks);
       } catch (error) {
