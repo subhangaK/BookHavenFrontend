@@ -1,40 +1,59 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import ShoppingCart from './components/Cart';
-import OrderHistory from './components/OrderHistory';
-import ProductPage from './components/ProductPage';
-import Whishlist from './components/Whishlist';
-import LibraryUserProfile from './components/UserProfile';
-import AboutUs from './components/AboutUs';
-import ContactUs from './components/ContactUs';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Home from './components/Home';
-import LoginPage from './components/Login';
-import RegisterPage from './components/Register';
-import { AuthProvider } from './context/AuthContext';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import AdminBook from './components/AdminBook'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
+import ShoppingCart from "./components/Cart";
+import OrderHistory from "./components/OrderHistory";
+import ProductPage from "./components/ProductPage";
+import Whishlist from "./components/Whishlist";
+import LibraryUserProfile from "./components/UserProfile";
+import AboutUs from "./components/AboutUs";
+import ContactUs from "./components/ContactUs";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import Home from "./components/Home";
+import LoginPage from "./components/Login";
+import RegisterPage from "./components/Register";
+import { AuthProvider } from "./context/AuthContext";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import AdminBook from "./components/AdminBook";
+
+// Component to handle conditional rendering of Header and Footer
+function Layout() {
+  const location = useLocation();
+  // Normalize pathname to handle case sensitivity and trailing slashes
+  const pathname = location.pathname.toLowerCase().replace(/\/$/, "");
+  const excludeHeaderFooter = pathname === "/login" || pathname === "/register";
+
+  return (
+    <>
+      {!excludeHeaderFooter && <Header />}
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/cart" element={<ShoppingCart />} />
+        <Route path="/orderhistory" element={<OrderHistory />} />
+        <Route path="/userprofile" element={<LibraryUserProfile />} />
+        <Route path="/about-us" element={<AboutUs />} />
+        <Route path="/contact-us" element={<ContactUs />} />
+        <Route path="/productpage" element={<ProductPage />} />
+        <Route path="/whishlist" element={<Whishlist />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/adminbook" element={<AdminBook />} />
+      </Routes>
+      {!excludeHeaderFooter && <Footer />}
+    </>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <Header />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/cart" element={<ShoppingCart />} />
-          <Route path="/orderhistory" element={<OrderHistory />} />
-          <Route path="/userprofile" element={<LibraryUserProfile />} />
-          <Route path="/about-us" element={<AboutUs />} />
-          <Route path="/contact-us" element={<ContactUs />} />
-          <Route path="/ProductPage" element={<ProductPage />} />
-          <Route path="/Whishlist" element={<Whishlist />} />
-          <Route path="/Login" element={<LoginPage />} />
-          <Route path="/Register" element={<RegisterPage />} />
-          <Route path="/AdminBook" element={<AdminBook />} />
-        </Routes>
-        <Footer />
+        <Layout />
         <ToastContainer />
       </Router>
     </AuthProvider>

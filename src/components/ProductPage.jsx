@@ -1,31 +1,43 @@
-import { useState } from 'react';
-import { FaSearch, FaShoppingCart, FaUser, FaPhone } from 'react-icons/fa';
-import ProductCard, { FavoritesProvider } from './ProductCard';
+import { useState, useEffect } from "react";
+import { FaSearch, FaShoppingCart, FaUser, FaPhone } from "react-icons/fa";
+import ProductCard, { FavoritesProvider } from "./ProductCard";
 
 export default function ProductPage() {
   const [priceRange, setPriceRange] = useState(100);
-  const [view, setView] = useState('grid');
+  const [view, setView] = useState("grid");
+  const [allProducts, setAllProducts] = useState([]);
 
-  // Sample data for books
-  const newArrivals = [
-    { id: '1', title: 'The Enchanted Castle', author: 'J.K. Rowling', price: 20, image: '/api/placeholder/240/240' },
-    { id: '2', title: 'Journey to the Peaks', author: 'John Green', price: 25, image: '/api/placeholder/240/240' },
-    { id: '3', title: 'Ancient Civilizations', author: 'George R.R. Martin', price: 30, image: '/api/placeholder/240/240' },
-    { id: '4', title: 'Future Worlds', author: 'Isaac Asimov', price: 35, image: '/api/placeholder/240/240' },
-  ];
+  // Fetch all books from the backend
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        const response = await fetch("https://localhost:7189/api/Auth/books");
+        if (!response.ok) {
+          throw new Error("Failed to fetch books");
+        }
+        const books = await response.json();
+        // Map backend book data to match ProductCard props
+        const formattedBooks = books.map((book) => ({
+          id: book.id.toString(), // Convert to string to match ProductCard key type
+          title: book.title,
+          author: book.author,
+          price: book.price,
+          image: book.imagePath || "/api/placeholder/240/240", // Fallback image if none provided
+        }));
+        setAllProducts(formattedBooks);
+      } catch (error) {
+        console.error("Error fetching books:", error);
+        // Set empty array on error
+        setAllProducts([]);
+      }
+    };
 
-  const allProducts = [
-    { id: '5', title: 'Classic Tales', author: 'Mark Twain', price: 15, image: '/api/placeholder/240/240' },
-    { id: '6', title: 'Artistic Expressions', author: 'Vincent Van Gogh', price: 40, image: '/api/placeholder/240/240' },
-    { id: '7', title: 'Spice It Up', author: 'Jamie Oliver', price: 22, image: '/api/placeholder/240/240' },
-    { id: '8', title: 'The Silent Witness', author: 'Agatha Christie', price: 28, image: '/api/placeholder/240/240' },
-  ];
+    fetchBooks();
+  }, []);
 
   return (
     <FavoritesProvider>
       <div className="min-h-screen bg-white">
-   
-
         <div className="flex flex-col md:flex-row">
           {/* Sidebar */}
           <div className="w-full md:w-64 p-6 border-r border-gray-200">
@@ -86,37 +98,24 @@ export default function ProductPage() {
 
           {/* Main Content */}
           <div className="flex-1 p-6">
-            {/* New Arrivals */}
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {newArrivals.map((book) => (
-                  <ProductCard
-                    key={book.id}
-                    id={book.id}
-                    title={book.title}
-                    author={book.author}
-                    price={book.price}
-                    image={book.image}
-                  />
-                ))}
-              </div>
-            </div>
-
             {/* All Products */}
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">All Products</h2>
                 <div className="flex items-center space-x-2">
                   <button
-                    className={`px-4 py-2 rounded-lg text-sm ${view === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                    onClick={() => setView('grid')}
+                    className={`px-4 py-2 rounded-lg text-sm ${
+                      view === "grid" ? "bg-blue-500 text-white" : "bg-gray-200"
+                    }`}
+                    onClick={() => setView("grid")}
                   >
                     Grid View
                   </button>
                   <button
-                    className={`px-4 py-2 rounded-lg text-sm ${view === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                    onClick={() => setView('list')}
+                    className={`px-4 py-2 rounded-lg text-sm ${
+                      view === "list" ? "bg-blue-500 text-white" : "bg-gray-200"
+                    }`}
+                    onClick={() => setView("list")}
                   >
                     List View
                   </button>
@@ -151,17 +150,23 @@ export default function ProductPage() {
               {/* Pagination */}
               <div className="flex justify-center">
                 <div className="flex space-x-2">
-                  <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-500 text-white">1</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300">2</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300">3</button>
-                  <button className="px-3 h-8 flex items-center justify-center rounded-md border border-gray-300">Next</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-500 text-white">
+                    1
+                  </button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300">
+                    2
+                  </button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300">
+                    3
+                  </button>
+                  <button className="px-3 h-8 flex items-center justify-center rounded-md border border-gray-300">
+                    Next
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-       
       </div>
     </FavoritesProvider>
   );

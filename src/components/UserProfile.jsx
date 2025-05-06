@@ -240,7 +240,6 @@ export default function LibraryUserProfile() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header />
       <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header with background */}
@@ -355,7 +354,6 @@ export default function LibraryUserProfile() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }
