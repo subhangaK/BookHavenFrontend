@@ -6,15 +6,15 @@ import { toast } from 'react-toastify';
 
 const Header = () => {
   const [searchFocused, setSearchFocused] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false); // State for dropdown visibility
-  const { user, logout } = useContext(AuthContext); // Access AuthContext for user and logout
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { user, roles, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const HeaderSearchBar = () => (
     <div className={`relative ${searchFocused ? 'flex-grow' : ''}`}>
       <input
         type="text"
-        placeholder="Search books, authors, genres..."
+        placeholder="Search books, authors, ISBN..."
         className={`pl-10 pr-4 py-2 rounded-lg bg-gray-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 w-full ${
           searchFocused ? 'shadow-md' : ''
         }`}
@@ -26,10 +26,10 @@ const Header = () => {
   );
 
   const handleLogout = () => {
-    logout(); // Call logout from AuthContext
+    logout();
     toast.success('Logged out successfully!', { position: 'top-right', autoClose: 3000 });
-    setDropdownOpen(false); // Close dropdown
-    navigate('/'); // Redirect to homepage
+    setDropdownOpen(false);
+    navigate('/');
   };
 
   return (
@@ -103,6 +103,15 @@ const Header = () => {
                         >
                           View Profile
                         </Link>
+                        {roles.includes('SuperAdmin') && (
+                          <Link
+                            to="/AdminBook"
+                            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
+                            onClick={() => setDropdownOpen(false)}
+                          >
+                            Admin Dashboard
+                          </Link>
+                        )}
                         <button
                           onClick={handleLogout}
                           className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
