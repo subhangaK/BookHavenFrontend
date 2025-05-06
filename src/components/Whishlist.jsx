@@ -303,6 +303,53 @@ const Wishlist = () => {
               </div>
             </>
           )}
+=======
+  return (
+    <FavoritesProvider>
+      <div className="bg-gray-100 min-h-screen">
+        <main className="container mx-auto py-8 px-4">
+          <h2 className="text-2xl font-bold mb-6">Wishlist</h2>
+
+          {isLoading && <p className="text-gray-600">Loading wishlist...</p>}
+
+          {error && <p className="text-red-500 mb-4">{error}</p>}
+
+          {!isLoading && !error && wishlistBooks.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">Your wishlist is empty.</p>
+              <Link
+                to="/"
+                className="bg-indigo-500 text-white rounded py-2 px-4 hover:bg-indigo-600 transition"
+              >
+                Browse Books
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {wishlistBooks.map((book) => (
+                <div
+                  key={book.id}
+                  className="bg-white shadow-sm rounded overflow-hidden"
+                >
+                  <ProductCard
+                    id={book.id}
+                    title={book.title}
+                    author={book.author}
+                    price={book.price}
+                    image={book.imagePath || "/api/placeholder/240/160"}
+                  />
+                  <div className="p-4 pt-0">
+                    <button
+                      className="w-full bg-indigo-500 text-white rounded py-2 hover:bg-indigo-600 transition"
+                      onClick={() => removeFromWishlist(book.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </main>
       </div>
     </FavoritesProvider>

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { FaHeart, FaShoppingCart, FaStar } from "react-icons/fa";
+import { FaHeart } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -71,6 +72,11 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
 
   const handleToggleFavorite = async (e) => {
     e.stopPropagation();
+const ProductCard = ({ id, title, author, price, image }) => {
+  const { favorites, toggleFavorite } = useContext(FavoritesContext);
+  const navigate = useNavigate();
+
+  const handleToggleFavorite = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Please log in to manage your wishlist");
@@ -231,6 +237,11 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
             <span className="text-gray-500">No image available</span>
           </div>
         )}
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="aspect-square overflow-hidden">
+        <img src={image} alt={title} className="w-full h-full object-cover" />
       </div>
 
       {/* Book Details */}
@@ -243,6 +254,19 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           <FaStar />
           <FaStar className="text-gray-300" />
           <span className="ml-1 text-xs text-gray-600">(4.0)</span>
+        <div className="font-bold mb-1">{title}</div>
+        <div className="text-sm text-gray-600 mb-2">by {author}</div>
+        <div className="flex justify-between items-center">
+          <span className="font-bold">${price}</span>
+          <FaHeart
+            size={18}
+            className={
+              favorites.includes(id)
+                ? "text-red-500 cursor-pointer"
+                : "text-gray-300 cursor-pointer"
+            }
+            onClick={handleToggleFavorite}
+          />
         </div>
 
         {/* Book Title */}
