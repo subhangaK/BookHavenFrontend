@@ -20,6 +20,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AdminBook from "./components/AdminBook";
+import Order from "./components/Order";
 
 // Component to handle conditional rendering of Header and Footer
 function Layout() {
@@ -43,6 +44,7 @@ function Layout() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/adminbook" element={<AdminBook />} />
+        <Route path="/order" element={<Order/>} />
       </Routes>
       {!excludeHeaderFooter && <Footer />}
     </>

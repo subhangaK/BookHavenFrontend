@@ -18,11 +18,11 @@ export default function ProductPage() {
         const books = await response.json();
         // Map backend book data to match ProductCard props
         const formattedBooks = books.map((book) => ({
-          id: book.id.toString(), // Convert to string to match ProductCard key type
+          id: book.id.toString(),
           title: book.title,
           author: book.author,
           price: book.price,
-          image: book.imagePath || "/api/placeholder/240/240", // Fallback image if none provided
+          imagePath: book.imagePath,
         }));
         setAllProducts(formattedBooks);
       } catch (error) {
@@ -142,7 +142,7 @@ export default function ProductPage() {
                     title={book.title}
                     author={book.author}
                     price={book.price}
-                    image={book.image}
+                    imagePath={book.imagePath}
                   />
                 ))}
               </div>
