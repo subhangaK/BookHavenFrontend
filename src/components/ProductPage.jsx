@@ -57,7 +57,6 @@ export default function ProductPage() {
     setCurrentPage(1);
   }, [searchParams, selectedCategories, selectedAuthors, sortOption, priceRange, yearRange]);
 
-  // Helper function to assign random category (for demo purposes)
   const assignRandomCategory = () => {
     const categoryNames = categories.map((c) => c.name);
     return categoryNames[Math.floor(Math.random() * categoryNames.length)];
