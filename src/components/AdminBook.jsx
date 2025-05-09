@@ -21,6 +21,8 @@ const AddBookModal = memo(({ showAddModal, setShowAddModal, newBook, setNewBook,
               isbn: "",
               publicationYear: "",
               price: "",
+              description: "",
+              category: "",
               image: null,
             });
             setAddErrors({});
@@ -134,9 +136,7 @@ const AddBookModal = memo(({ showAddModal, setShowAddModal, newBook, setNewBook,
             placeholder="Publication year"
           />
           {addErrors.publicationYear && (
-            <p className="text-red-500 text-xs mt-1">
-              {addErrors.publicationYear}
-            </p>
+            <p className="text-red-500 text-xs mt-1">{addErrors.publicationYear}</p>
           )}
         </div>
         <div>
@@ -155,6 +155,44 @@ const AddBookModal = memo(({ showAddModal, setShowAddModal, newBook, setNewBook,
           />
           {addErrors.price && (
             <p className="text-red-500 text-xs mt-1">{addErrors.price}</p>
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Description
+          </label>
+          <textarea
+            name="description"
+            value={newBook.description}
+            onChange={(e) => handleInputChange(e)}
+            className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              addErrors.description ? "border-red-500" : ""
+            }`}
+            placeholder="Book description"
+            rows="4"
+          />
+          {addErrors.description && (
+            <p className="text-red-500 text-xs mt-1">{addErrors.description}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Category
+          </label>
+          <select
+            name="category"
+            value={newBook.category}
+            onChange={(e) => handleInputChange(e)}
+            className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              addErrors.category ? "border-red-500" : ""
+            }`}
+          >
+            <option value="">Select category</option>
+            <option value="Fiction">Fiction</option>
+            <option value="Nonfiction">Nonfiction</option>
+          </select>
+          {addErrors.category && (
+            <p className="text-red-500 text-xs mt-1">{addErrors.category}</p>
           )}
         </div>
       </div>
@@ -301,9 +339,7 @@ const EditBookModal = memo(({ showEditModal, setShowEditModal, selectedBook, set
               placeholder="Publication year"
             />
             {editErrors.publicationYear && (
-              <p className="text-red-500 text-xs mt-1">
-                {editErrors.publicationYear}
-              </p>
+              <p className="text-red-500 text-xs mt-1">{editErrors.publicationYear}</p>
             )}
           </div>
           <div>
@@ -322,6 +358,44 @@ const EditBookModal = memo(({ showEditModal, setShowEditModal, selectedBook, set
             />
             {editErrors.price && (
               <p className="text-red-500 text-xs mt-1">{editErrors.price}</p>
+            )}
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              name="description"
+              value={selectedBook.description}
+              onChange={(e) => handleInputChange(e, true)}
+              className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                editErrors.description ? "border-red-500" : ""
+              }`}
+              placeholder="Book description"
+              rows="4"
+            />
+            {editErrors.description && (
+              <p className="text-red-500 text-xs mt-1">{editErrors.description}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <select
+              name="category"
+              value={selectedBook.category}
+              onChange={(e) => handleInputChange(e, true)}
+              className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                editErrors.category ? "border-red-500" : ""
+              }`}
+            >
+              <option value="">Select category</option>
+              <option value="Fiction">Fiction</option>
+              <option value="Nonfiction">Nonfiction</option>
+            </select>
+            {editErrors.category && (
+              <p className="text-red-500 text-xs mt-1">{editErrors.category}</p>
             )}
           </div>
         </div>
@@ -357,8 +431,7 @@ const DeleteConfirmationModal = memo(({ showDeleteModal, setShowDeleteModal, boo
           </div>
           <h2 className="text-xl font-semibold mb-2">Delete Book</h2>
           <p className="text-gray-600 mb-6">
-            Are you sure you want to delete "{bookToDelete.title}" by{" "}
-            {bookToDelete.author}? This action cannot be undone.
+            Are you sure you want to delete "{bookToDelete.title}" by {bookToDelete.author}? This action cannot be undone.
           </p>
         </div>
         <div className="flex justify-center">
@@ -395,6 +468,8 @@ export default function BookAdminDashboard() {
     isbn: "",
     publicationYear: "",
     price: "",
+    description: "",
+    category: "",
     image: null,
   });
   const [imagePreview, setImagePreview] = useState("");
@@ -417,6 +492,8 @@ export default function BookAdminDashboard() {
         isbn: book.isbn,
         publicationYear: book.publicationYear,
         price: book.price,
+        description: book.description,
+        category: book.category,
         imagePath: book.imagePath,
       }));
       setBooks(mappedBooks);
@@ -501,6 +578,9 @@ export default function BookAdminDashboard() {
       errors.price = "Price must be a positive number";
     }
 
+    if (!book.description) errors.description = "Description is required";
+    if (!book.category) errors.category = "Category is required";
+
     return errors;
   };
 
@@ -521,6 +601,8 @@ export default function BookAdminDashboard() {
     formData.append("ISBN", newBook.isbn);
     formData.append("Price", newBook.price.toString());
     formData.append("PublicationYear", newBook.publicationYear.toString());
+    formData.append("Description", newBook.description);
+    formData.append("Category", newBook.category);
     if (newBook.image) {
       formData.append("Image", newBook.image);
     }
@@ -546,6 +628,8 @@ export default function BookAdminDashboard() {
           isbn: addedBook.isbn,
           publicationYear: addedBook.publicationYear,
           price: addedBook.price,
+          description: addedBook.description,
+          category: addedBook.category,
           imagePath: addedBook.imagePath,
         },
       ]);
@@ -555,6 +639,8 @@ export default function BookAdminDashboard() {
         isbn: "",
         publicationYear: "",
         price: "",
+        description: "",
+        category: "",
         image: null,
       });
       setImagePreview("");
@@ -590,6 +676,8 @@ export default function BookAdminDashboard() {
     formData.append("ISBN", selectedBook.isbn);
     formData.append("Price", selectedBook.price.toString());
     formData.append("PublicationYear", selectedBook.publicationYear.toString());
+    formData.append("Description", selectedBook.description);
+    formData.append("Category", selectedBook.category);
     if (selectedBook.image) {
       formData.append("Image", selectedBook.image);
     }
@@ -616,6 +704,8 @@ export default function BookAdminDashboard() {
                 isbn: updatedBook.isbn,
                 publicationYear: updatedBook.publicationYear,
                 price: updatedBook.price,
+                description: updatedBook.description,
+                category: updatedBook.category,
                 imagePath: updatedBook.imagePath,
               }
             : book
@@ -734,6 +824,9 @@ export default function BookAdminDashboard() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Price
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -752,9 +845,7 @@ export default function BookAdminDashboard() {
                         />
                       ) : (
                         <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center">
-                          <span className="text-xs text-gray-500">
-                            No image
-                          </span>
+                          <span className="text-xs text-gray-500">No image</span>
                         </div>
                       )}
                     </td>
@@ -763,6 +854,7 @@ export default function BookAdminDashboard() {
                     <td className="px-6 py-4">{book.isbn}</td>
                     <td className="px-6 py-4">{book.publicationYear}</td>
                     <td className="px-6 py-4">{book.price}</td>
+                    <td className="px-6 py-4">{book.category}</td>
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => openEditModal(book)}
@@ -781,10 +873,7 @@ export default function BookAdminDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td
-                    colSpan="7"
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
+                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
                     No books found. Add a new book or try a different search term.
                   </td>
                 </tr>

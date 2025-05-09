@@ -127,6 +127,32 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
     }
 
     try {
+      // Check if the book is in orders
+      const orderResponse = await axios.get(
+        "https://localhost:7189/api/Order",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
+        }
+      );
+
+      if (!Array.isArray(orderResponse.data)) {
+        console.error("Expected an array for orders, got:", orderResponse.data);
+        alert("Failed to verify order status. Please try again.");
+        return;
+      }
+
+      const isInOrder = orderResponse.data.some((order) => order.id === id);
+      if (isInOrder) {
+        alert(
+          "This book is already in an order and cannot be added to the cart."
+        );
+        return;
+      }
+
+      // Proceed to add to cart
       await axios.post(
         "https://localhost:7189/api/Cart/add",
         { bookId: id },
@@ -139,6 +165,7 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
         }
       );
       alert("Book added to cart successfully!");
+      navigate("/cart");
     } catch (error) {
       console.error("Error adding to cart:", error);
       if (error.response?.status === 404) {
@@ -151,44 +178,6 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
         navigate("/login");
       } else {
         alert("Failed to add book to cart. Please try again.");
-      }
-    }
-  };
-
-  const handleAddToOrder = async (e) => {
-    e.stopPropagation();
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please log in to add items to your order");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      await axios.post(
-        "https://localhost:7189/api/Order/add",
-        { bookId: id },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "*/*",
-          },
-        }
-      );
-      alert("Book added to order successfully!");
-    } catch (error) {
-      console.error("Error adding to order:", error);
-      if (error.response?.status === 404) {
-        alert("Book not found.");
-      } else if (error.response?.status === 400) {
-        alert("Book already in order or invalid request.");
-      } else if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else {
-        alert("Failed to add book to order. Please try again.");
       }
     }
   };
@@ -257,9 +246,6 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-baseline">
             <span className="text-lg font-bold text-gray-800">${price}</span>
-            <span className="text-sm text-gray-500 line-through ml-2">
-              ${(price * 1.2).toFixed(2)}
-            </span>
           </div>
         </div>
 
@@ -270,15 +256,6 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
         >
           <FaShoppingCart className="mr-2" />
           Add to Cart
-        </button>
-
-        {/* Add to Order Button */}
-        <button
-          onClick={handleAddToOrder}
-          className="mt-2 w-full border-1 border-indigo-600 text-black py-2 px-4 rounded-md hover:bg-indigo-600 transition-colors duration-300 flex items-center justify-center"
-        >
-          <FaShoppingCart className="mr-2" />
-          Place Order
         </button>
       </div>
     </div>
