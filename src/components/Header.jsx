@@ -126,6 +126,15 @@ const Header = () => {
                             Admin Dashboard
                           </Link>
                         )}
+                        {roles.includes('SuperAdmin') && (
+                          <Link
+                            to="/AdminOrder"
+                            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
+                            onClick={() => setDropdownOpen(false)}
+                          >
+                            Admin Order
+                          </Link>
+                        )}
                         <button
                           onClick={handleLogout}
                           className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
