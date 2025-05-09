@@ -7,7 +7,6 @@ import {
   FaArrowLeft,
   FaHeart,
   FaLock,
-  FaTag,
   FaTruck,
 } from "react-icons/fa";
 import ProductCard, { FavoritesProvider } from "./ProductCard";
@@ -16,7 +15,6 @@ const Checkout = () => {
   const [cartBooks, setCartBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [promoCode, setPromoCode] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -73,14 +71,6 @@ const Checkout = () => {
   }, [navigate]);
 
   const removeFromCart = async (bookId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to remove this book from your cart?"
-      )
-    ) {
-      return;
-    }
-
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -152,32 +142,57 @@ const Checkout = () => {
     }
   };
 
+  const handleCheckout = async (book) => {
+    if (!book) {
+      alert("No item selected for checkout.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in to place an order");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await axios.post(
+        "https://localhost:7189/api/Order/add",
+        { bookId: book.id, quantity: book.quantity },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
+      alert(`Book "${book.title}" added to order successfully!`);
+      navigate("/order");
+      // Remove from cart after successful checkout
+      await removeFromCart(book.id);
+    } catch (error) {
+      console.error("Error adding to order:", error);
+      if (error.response?.status === 404) {
+        alert("Book not found.");
+      } else if (error.response?.status === 400) {
+        alert("Book already in order or invalid request.");
+      } else if (error.response?.status === 401) {
+        alert("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        alert("Failed to add book to order. Please try again.");
+      }
+    }
+  };
+
   const subtotal = cartBooks.reduce(
     (sum, book) => sum + book.price * book.quantity,
     0
   );
-
-  const shipping = subtotal > 50 ? 0 : 4.99;
-  const tax = subtotal * 0.07; // 7% tax
-  const totalPrice = (subtotal + shipping + tax).toFixed(2);
+  const totalPrice = subtotal.toFixed(2);
   const subtotalFormatted = subtotal.toFixed(2);
-  const shippingFormatted = shipping.toFixed(2);
-  const taxFormatted = tax.toFixed(2);
-
-  const handleCheckout = () => {
-    if (cartBooks.length === 0) {
-      alert("Your cart is empty. Add items to proceed with checkout.");
-      return;
-    }
-    alert("Proceeding to payment processing...");
-    // Add logic for payment processing or redirect to payment gateway here
-  };
-
-  const handleApplyPromo = (e) => {
-    e.preventDefault();
-    alert(`Promo code "${promoCode}" applied!`);
-    setPromoCode("");
-  };
 
   return (
     <FavoritesProvider>
@@ -233,7 +248,7 @@ const Checkout = () => {
                   >
                     <path
                       fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      d="10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                       clipRule="evenodd"
                     />
                   </svg>
@@ -315,43 +330,13 @@ const Checkout = () => {
                               </div>
                               <div className="mt-4 sm:mt-0 text-right">
                                 <div className="font-bold text-gray-900">
-                                  ${book.price.toFixed(2)}
-                                </div>
-                                <div className="text-sm text-gray-500 line-through">
-                                  ${(book.price * 1.2).toFixed(2)}
+                                  ${book.price.toFixed(2)} x {book.quantity} = $
+                                  {(book.price * book.quantity).toFixed(2)}
                                 </div>
                               </div>
                             </div>
 
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4">
-                              {/* Quantity selector */}
-                              <div className="flex items-center mb-4 sm:mb-0">
-                                <span className="text-sm text-gray-600 mr-3">
-                                  Qty:
-                                </span>
-                                <div className="flex items-center border rounded">
-                                  <button
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                    onClick={() =>
-                                      updateQuantity(book.id, book.quantity - 1)
-                                    }
-                                  >
-                                    -
-                                  </button>
-                                  <span className="px-3 py-1 text-gray-800">
-                                    {book.quantity}
-                                  </span>
-                                  <button
-                                    className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                    onClick={() =>
-                                      updateQuantity(book.id, book.quantity + 1)
-                                    }
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </div>
-
                               {/* Action buttons */}
                               <div className="flex space-x-3">
                                 <button
@@ -368,6 +353,14 @@ const Checkout = () => {
                                   <FaTrashAlt className="mr-1" />
                                   Remove
                                 </button>
+                                <button
+                                  onClick={() => handleCheckout(book)}
+                                  className="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 flex items-center"
+                                >
+                                  <FaLock className="mr-1" />
+                                  Checkout ($
+                                  {(book.price * book.quantity).toFixed(2)})
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -382,35 +375,11 @@ const Checkout = () => {
                   <div className="bg-white rounded-lg shadow-sm border overflow-hidden sticky top-6">
                     <div className="border-b px-6 py-4">
                       <h2 className="font-semibold text-lg text-gray-800">
-                        Order Summary
+                        Order Summary (All Items)
                       </h2>
                     </div>
 
                     <div className="p-6">
-                      {/* Promo code */}
-                      <form onSubmit={handleApplyPromo} className="mb-6">
-                        <div className="flex items-center">
-                          <div className="relative flex-grow">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <FaTag className="text-gray-400" />
-                            </div>
-                            <input
-                              type="text"
-                              placeholder="Promo code"
-                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                              value={promoCode}
-                              onChange={(e) => setPromoCode(e.target.value)}
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            className="ml-2 bg-indigo-600 text-white px-4 py-2 text-sm font-medium rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                          >
-                            Apply
-                          </button>
-                        </div>
-                      </form>
-
                       {/* Price breakdown */}
                       <div className="border-b pb-4">
                         <div className="flex justify-between mb-2">
@@ -418,20 +387,6 @@ const Checkout = () => {
                           <span className="text-gray-800">
                             ${subtotalFormatted}
                           </span>
-                        </div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-gray-600">Shipping</span>
-                          <span className="text-gray-800">
-                            {shipping === 0 ? (
-                              <span className="text-green-600">Free</span>
-                            ) : (
-                              `$${shippingFormatted}`
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-gray-600">Tax (7%)</span>
-                          <span className="text-gray-800">${taxFormatted}</span>
                         </div>
                       </div>
 
@@ -444,27 +399,6 @@ const Checkout = () => {
                           <span className="text-lg font-bold text-gray-800">
                             ${totalPrice}
                           </span>
-                        </div>
-                      </div>
-
-                      {/* Checkout button */}
-                      <button
-                        className="w-full bg-indigo-600 text-white py-3 rounded-md font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center"
-                        onClick={handleCheckout}
-                      >
-                        <FaLock className="mr-2" />
-                        Proceed to Checkout
-                      </button>
-
-                      {/* Additional info */}
-                      <div className="mt-6 text-sm text-gray-500">
-                        <div className="flex items-center mb-2">
-                          <FaTruck className="mr-2 text-gray-400" />
-                          <span>Free shipping on orders over $50</span>
-                        </div>
-                        <div className="flex items-center">
-                          <FaLock className="mr-2 text-gray-400" />
-                          <span>Secure checkout with SSL encryption</span>
                         </div>
                       </div>
                     </div>
