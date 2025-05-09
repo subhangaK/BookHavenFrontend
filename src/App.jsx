@@ -22,6 +22,7 @@ import "react-toastify/dist/ReactToastify.css";
 import AdminBook from "./components/AdminBook";
 import Order from "./components/Order";
 import ItemDetails from "./components/ItemDetail";
+import AdminOrderPage from "./components/AdminOrder";
 
 // Component to handle conditional rendering of Header and Footer
 function Layout() {
@@ -45,6 +46,7 @@ function Layout() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/adminbook" element={<AdminBook />} />
+        <Route path="/adminorder" element={<AdminOrderPage />} />
         <Route path="/order" element={<Order/>} />
         <Route path="/books/:id" element={<ItemDetails/>} />
       </Routes>
