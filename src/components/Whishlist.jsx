@@ -144,7 +144,6 @@ const Wishlist = () => {
   return (
     <FavoritesProvider>
       <div className="min-h-screen bg-gray-50">
-
         <main className="container mx-auto py-8 px-4">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
@@ -281,13 +280,7 @@ const Wishlist = () => {
                           <span className="text-lg font-bold text-gray-900">
                             ${book.price}
                           </span>
-                          <span className="text-sm text-gray-500 line-through ml-2">
-                            ${(book.price * 1.2).toFixed(2)}
-                          </span>
                         </div>
-                        <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
-                          20% OFF
-                        </span>
                       </div>
 
                       <button

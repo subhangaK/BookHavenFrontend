@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
 import axios from "axios";
 import { FaShoppingCart, FaTrashAlt, FaStore, FaSadTear } from "react-icons/fa";
 import { FavoritesProvider } from "./ProductCard";
@@ -8,6 +8,7 @@ const Order = () => {
   const [orderBooks, setOrderBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // Added for navigation
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -35,20 +36,29 @@ const Order = () => {
           return;
         }
 
-        setOrderBooks(
-          response.data.map((book) => ({
-            id: book.id,
-            title: book.title,
-            author: book.author,
-            price: book.price,
-            imagePath: book.imagePath,
-          }))
-        );
+        // Remove duplicates by book ID (in case of multiple entries)
+        const uniqueBooks = [];
+        const seenIds = new Set();
+        response.data.forEach((book) => {
+          if (!seenIds.has(book.id)) {
+            seenIds.add(book.id);
+            uniqueBooks.push({
+              id: book.id,
+              title: book.title,
+              author: book.author,
+              price: book.price,
+              imagePath: book.imagePath,
+            });
+          }
+        });
+
+        setOrderBooks(uniqueBooks);
       } catch (error) {
         console.error("Error fetching order:", error);
         if (error.response?.status === 401) {
           setError("Session expired. Please log in again.");
           localStorage.removeItem("token");
+          navigate("/login");
         } else {
           setError("Failed to load order. Please try again.");
         }
@@ -58,7 +68,7 @@ const Order = () => {
       }
     };
     fetchOrder();
-  }, []);
+  }, [navigate]); // Added navigate to dependencies
 
   const removeFromOrder = async (bookId) => {
     if (
@@ -88,6 +98,7 @@ const Order = () => {
       if (error.response?.status === 401) {
         setError("Session expired. Please log in again.");
         localStorage.removeItem("token");
+        navigate("/login");
       } else if (error.response?.status === 404) {
         setError("Book not found in order.");
       } else {
@@ -115,12 +126,38 @@ const Order = () => {
           },
         }
       );
+      // Refresh order list after adding
+      const response = await axios.get("https://localhost:7189/api/Order", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "*/*",
+        },
+      });
+
+      if (Array.isArray(response.data)) {
+        const uniqueBooks = [];
+        const seenIds = new Set();
+        response.data.forEach((book) => {
+          if (!seenIds.has(book.id)) {
+            seenIds.add(book.id);
+            uniqueBooks.push({
+              id: book.id,
+              title: book.title,
+              author: book.author,
+              price: book.price,
+              imagePath: book.imagePath,
+            });
+          }
+        });
+        setOrderBooks(uniqueBooks);
+      }
       alert("Book added to order successfully!");
     } catch (error) {
       console.error("Error adding to order:", error);
       if (error.response?.status === 401) {
         setError("Session expired. Please log in again.");
         localStorage.removeItem("token");
+        navigate("/login");
       } else if (error.response?.status === 400) {
         setError("Book already in order or invalid request.");
       } else {
@@ -261,13 +298,7 @@ const Order = () => {
                           <span className="text-lg font-bold text-gray-900">
                             ${book.price}
                           </span>
-                          <span className="text-sm text-gray-500 line-through ml-2">
-                            ${(book.price * 1.2).toFixed(2)}
-                          </span>
                         </div>
-                        <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
-                          20% OFF
-                        </span>
                       </div>
 
                       <button
