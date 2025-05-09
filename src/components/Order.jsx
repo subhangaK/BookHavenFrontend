@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaShoppingCart, FaTrashAlt, FaStore, FaSadTear } from "react-icons/fa";
 import { FavoritesProvider } from "./ProductCard";
@@ -8,7 +8,7 @@ const Order = () => {
   const [orderBooks, setOrderBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // Added for navigation
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -21,38 +21,32 @@ const Order = () => {
           setOrderBooks([]);
           return;
         }
-
+  
         const response = await axios.get("https://localhost:7189/api/Order", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "*/*",
           },
         });
-
+  
         if (!Array.isArray(response.data)) {
           console.error("Expected an array, got:", response.data);
           setOrderBooks([]);
           setError("Invalid order data received");
           return;
         }
-
-        // Remove duplicates by book ID (in case of multiple entries)
-        const uniqueBooks = [];
-        const seenIds = new Set();
-        response.data.forEach((book) => {
-          if (!seenIds.has(book.id)) {
-            seenIds.add(book.id);
-            uniqueBooks.push({
-              id: book.id,
-              title: book.title,
-              author: book.author,
-              price: book.price,
-              imagePath: book.imagePath,
-            });
-          }
-        });
-
-        setOrderBooks(uniqueBooks);
+  
+        setOrderBooks(
+          response.data.map((book) => ({
+            id: book.id, // Changed from book.bookId to book.id to match OrderController.cs
+            title: book.title,
+            author: book.author,
+            price: book.price,
+            imagePath: book.imagePath,
+            claimCode: book.claimCode,
+            dateAdded: book.dateAdded,
+          }))
+        );
       } catch (error) {
         console.error("Error fetching order:", error);
         if (error.response?.status === 401) {
@@ -68,8 +62,8 @@ const Order = () => {
       }
     };
     fetchOrder();
-  }, [navigate]); // Added navigate to dependencies
-
+  }, [navigate]);
+  
   const removeFromOrder = async (bookId) => {
     if (
       !window.confirm(
@@ -103,65 +97,6 @@ const Order = () => {
         setError("Book not found in order.");
       } else {
         setError("Failed to remove book from order.");
-      }
-    }
-  };
-
-  const addToOrder = async (bookId) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("Please log in to add items to your order");
-        return;
-      }
-
-      await axios.post(
-        "https://localhost:7189/api/Order/add",
-        { bookId: bookId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "*/*",
-          },
-        }
-      );
-      // Refresh order list after adding
-      const response = await axios.get("https://localhost:7189/api/Order", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "*/*",
-        },
-      });
-
-      if (Array.isArray(response.data)) {
-        const uniqueBooks = [];
-        const seenIds = new Set();
-        response.data.forEach((book) => {
-          if (!seenIds.has(book.id)) {
-            seenIds.add(book.id);
-            uniqueBooks.push({
-              id: book.id,
-              title: book.title,
-              author: book.author,
-              price: book.price,
-              imagePath: book.imagePath,
-            });
-          }
-        });
-        setOrderBooks(uniqueBooks);
-      }
-      alert("Book added to order successfully!");
-    } catch (error) {
-      console.error("Error adding to order:", error);
-      if (error.response?.status === 401) {
-        setError("Session expired. Please log in again.");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else if (error.response?.status === 400) {
-        setError("Book already in order or invalid request.");
-      } else {
-        setError("Failed to add book to order. Please try again.");
       }
     }
   };
@@ -289,25 +224,23 @@ const Order = () => {
                           {book.title}
                         </h3>
                       </Link>
-                      <p className="text-sm text-gray-500 mb-3">
+                      <p className="text-sm text-gray-500 mb-1">
                         by {book.author}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-1">
+                        Claim Code: {book.claimCode}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-3">
+                        Ordered on: {new Date(book.dateAdded).toLocaleDateString()}
                       </p>
 
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-baseline">
                           <span className="text-lg font-bold text-gray-900">
-                            ${book.price}
+                            ${book.price.toFixed(2)}
                           </span>
                         </div>
                       </div>
-
-                      <button
-                        onClick={() => addToOrder(book.id)}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded flex items-center justify-center transition-colors"
-                      >
-                        <FaShoppingCart className="mr-2" size={16} />
-                        Add to Order
-                      </button>
                     </div>
                   </div>
                 ))}
