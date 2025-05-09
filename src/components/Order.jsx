@@ -8,6 +8,11 @@ const Order = () => {
   const [orderBooks, setOrderBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [discountData, setDiscountData] = useState({
+    discountPercentage: 0,
+    totalOrders: 0,
+    currentOrderBookCount: 0,
+  });
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -21,27 +26,38 @@ const Order = () => {
           return;
         }
 
-        const response = await axios.get("https://localhost:7189/api/Order", {
+        // Use the with-discount endpoint to get discount data for each order item
+        const response = await axios.get("https://localhost:7189/api/Order/with-discount", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "*/*",
           },
         });
 
-        if (!Array.isArray(response.data)) {
-          console.error("Expected an array, got:", response.data);
+        // Check for orders array in the response
+        if (!response.data || !Array.isArray(response.data.orders)) {
+          console.error("Expected an array in orders, got:", response.data);
           setOrderBooks([]);
           setError("Invalid order data received");
           return;
         }
 
+        // Set the overall discount data
+        setDiscountData({
+          discountPercentage: response.data.discountPercentage || 0,
+          totalOrders: response.data.totalOrders || 0,
+          currentOrderBookCount: response.data.currentOrderBookCount || 0,
+        });
+
+        // Map the orders data to include discountPercentage
         setOrderBooks(
-          response.data.map((book) => ({
+          response.data.orders.map((book) => ({
             id: book.id,
             title: book.title,
             author: book.author,
             price: book.price,
             imagePath: book.imagePath,
+            discountPercentage: book.discountPercentage || 0, // Per-item discount
           }))
         );
       } catch (error) {
@@ -104,7 +120,7 @@ const Order = () => {
         return;
       }
 
-      await axios.post(
+      const response = await axios.post(
         "https://localhost:7189/api/Order/add",
         { bookId: bookId },
         {
@@ -115,6 +131,32 @@ const Order = () => {
           },
         }
       );
+
+      // After adding to order, refetch the order data to update discounts
+      const orderResponse = await axios.get("https://localhost:7189/api/Order/with-discount", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "*/*",
+        },
+      });
+
+      setDiscountData({
+        discountPercentage: orderResponse.data.discountPercentage || 0,
+        totalOrders: orderResponse.data.totalOrders || 0,
+        currentOrderBookCount: orderResponse.data.currentOrderBookCount || 0,
+      });
+
+      setOrderBooks(
+        orderResponse.data.orders.map((book) => ({
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          price: book.price,
+          imagePath: book.imagePath,
+          discountPercentage: book.discountPercentage || 0,
+        }))
+      );
+
       alert("Book added to order successfully!");
     } catch (error) {
       console.error("Error adding to order:", error);
@@ -244,6 +286,12 @@ const Order = () => {
                       >
                         <FaTrashAlt className="text-red-500" size={16} />
                       </button>
+                      {/* Discount Tag */}
+                      {book.discountPercentage > 0 && (
+                        <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
+                          {book.discountPercentage * 100}% OFF
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-4">
@@ -258,16 +306,21 @@ const Order = () => {
 
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-baseline">
-                          <span className="text-lg font-bold text-gray-900">
-                            ${book.price}
-                          </span>
-                          <span className="text-sm text-gray-500 line-through ml-2">
-                            ${(book.price * 1.2).toFixed(2)}
-                          </span>
+                          {book.discountPercentage > 0 ? (
+                            <>
+                              <span className="text-lg font-bold text-gray-900">
+                                ${(book.price * (1 - book.discountPercentage)).toFixed(2)}
+                              </span>
+                              <span className="text-sm text-gray-500 line-through ml-2">
+                                ${book.price.toFixed(2)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-lg font-bold text-gray-900">
+                              ${book.price.toFixed(2)}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
-                          20% OFF
-                        </span>
                       </div>
 
                       <button
