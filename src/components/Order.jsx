@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { FaShoppingCart, FaTrashAlt, FaStore, FaSadTear } from "react-icons/fa";
 import { FavoritesProvider } from "./ProductCard";
@@ -8,7 +8,11 @@ const Order = () => {
   const [orderBooks, setOrderBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // Added for navigation
+  const [discountData, setDiscountData] = useState({
+    discountPercentage: 0,
+    totalOrders: 0,
+    currentOrderBookCount: 0,
+  });
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -22,43 +26,45 @@ const Order = () => {
           return;
         }
 
-        const response = await axios.get("https://localhost:7189/api/Order", {
+        // Use the with-discount endpoint to get discount data for each order item
+        const response = await axios.get("https://localhost:7189/api/Order/with-discount", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "*/*",
           },
         });
 
-        if (!Array.isArray(response.data)) {
-          console.error("Expected an array, got:", response.data);
+        // Check for orders array in the response
+        if (!response.data || !Array.isArray(response.data.orders)) {
+          console.error("Expected an array in orders, got:", response.data);
           setOrderBooks([]);
           setError("Invalid order data received");
           return;
         }
 
-        // Remove duplicates by book ID (in case of multiple entries)
-        const uniqueBooks = [];
-        const seenIds = new Set();
-        response.data.forEach((book) => {
-          if (!seenIds.has(book.id)) {
-            seenIds.add(book.id);
-            uniqueBooks.push({
-              id: book.id,
-              title: book.title,
-              author: book.author,
-              price: book.price,
-              imagePath: book.imagePath,
-            });
-          }
+        // Set the overall discount data
+        setDiscountData({
+          discountPercentage: response.data.discountPercentage || 0,
+          totalOrders: response.data.totalOrders || 0,
+          currentOrderBookCount: response.data.currentOrderBookCount || 0,
         });
 
-        setOrderBooks(uniqueBooks);
+        // Map the orders data to include discountPercentage
+        setOrderBooks(
+          response.data.orders.map((book) => ({
+            id: book.id,
+            title: book.title,
+            author: book.author,
+            price: book.price,
+            imagePath: book.imagePath,
+            discountPercentage: book.discountPercentage || 0, // Per-item discount
+          }))
+        );
       } catch (error) {
         console.error("Error fetching order:", error);
         if (error.response?.status === 401) {
           setError("Session expired. Please log in again.");
           localStorage.removeItem("token");
-          navigate("/login");
         } else {
           setError("Failed to load order. Please try again.");
         }
@@ -68,7 +74,7 @@ const Order = () => {
       }
     };
     fetchOrder();
-  }, [navigate]); // Added navigate to dependencies
+  }, []);
 
   const removeFromOrder = async (bookId) => {
     if (
@@ -98,7 +104,6 @@ const Order = () => {
       if (error.response?.status === 401) {
         setError("Session expired. Please log in again.");
         localStorage.removeItem("token");
-        navigate("/login");
       } else if (error.response?.status === 404) {
         setError("Book not found in order.");
       } else {
@@ -115,7 +120,7 @@ const Order = () => {
         return;
       }
 
-      await axios.post(
+      const response = await axios.post(
         "https://localhost:7189/api/Order/add",
         { bookId: bookId },
         {
@@ -126,38 +131,38 @@ const Order = () => {
           },
         }
       );
-      // Refresh order list after adding
-      const response = await axios.get("https://localhost:7189/api/Order", {
+
+      // After adding to order, refetch the order data to update discounts
+      const orderResponse = await axios.get("https://localhost:7189/api/Order/with-discount", {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "*/*",
         },
       });
 
-      if (Array.isArray(response.data)) {
-        const uniqueBooks = [];
-        const seenIds = new Set();
-        response.data.forEach((book) => {
-          if (!seenIds.has(book.id)) {
-            seenIds.add(book.id);
-            uniqueBooks.push({
-              id: book.id,
-              title: book.title,
-              author: book.author,
-              price: book.price,
-              imagePath: book.imagePath,
-            });
-          }
-        });
-        setOrderBooks(uniqueBooks);
-      }
+      setDiscountData({
+        discountPercentage: orderResponse.data.discountPercentage || 0,
+        totalOrders: orderResponse.data.totalOrders || 0,
+        currentOrderBookCount: orderResponse.data.currentOrderBookCount || 0,
+      });
+
+      setOrderBooks(
+        orderResponse.data.orders.map((book) => ({
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          price: book.price,
+          imagePath: book.imagePath,
+          discountPercentage: book.discountPercentage || 0,
+        }))
+      );
+
       alert("Book added to order successfully!");
     } catch (error) {
       console.error("Error adding to order:", error);
       if (error.response?.status === 401) {
         setError("Session expired. Please log in again.");
         localStorage.removeItem("token");
-        navigate("/login");
       } else if (error.response?.status === 400) {
         setError("Book already in order or invalid request.");
       } else {
@@ -281,6 +286,12 @@ const Order = () => {
                       >
                         <FaTrashAlt className="text-red-500" size={16} />
                       </button>
+                      {/* Discount Tag */}
+                      {book.discountPercentage > 0 && (
+                        <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
+                          {book.discountPercentage * 100}% OFF
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-4">
@@ -295,9 +306,20 @@ const Order = () => {
 
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-baseline">
-                          <span className="text-lg font-bold text-gray-900">
-                            ${book.price}
-                          </span>
+                          {book.discountPercentage > 0 ? (
+                            <>
+                              <span className="text-lg font-bold text-gray-900">
+                                ${(book.price * (1 - book.discountPercentage)).toFixed(2)}
+                              </span>
+                              <span className="text-sm text-gray-500 line-through ml-2">
+                                ${book.price.toFixed(2)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-lg font-bold text-gray-900">
+                              ${book.price.toFixed(2)}
+                            </span>
+                          )}
                         </div>
                       </div>
 
