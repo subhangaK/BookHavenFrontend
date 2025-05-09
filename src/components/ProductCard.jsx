@@ -183,7 +183,7 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
   };
 
   const navigateToDetails = () => {
-    navigate(`/book/${id}`);
+    navigate(`/books/${id}`);
   };
 
   return (
