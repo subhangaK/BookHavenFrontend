@@ -22,92 +22,146 @@ export default function ItemDetails() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const API_BASE_URL = "https://localhost:7189/";
   const token = localStorage.getItem("token");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (!id || id === "undefined") {
-          throw new Error("Invalid or missing book ID. Please select a book.");
+  // Token refresh function
+  const refreshToken = async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}api/auth/refresh`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
+      });
+      localStorage.setItem("token", response.data.token);
+      return response.data.token;
+    } catch (err) {
+      localStorage.removeItem("token");
+      navigate("/login");
+      throw new Error("Session expired. Please log in again.");
+    }
+  };
 
-        console.log("Current book ID:", id);
-        console.log("Converted book ID (Number(id)):", Number(id));
-
-        setLoading(true);
-
-        // Fetch book details
-        const bookResponse = await fetch(`${API_BASE_URL}api/auth/books/${id}`, {
-          headers: { Accept: "application/json" },
-        });
-        if (!bookResponse.ok) throw new Error(`Failed to fetch book: ${bookResponse.status} - ${bookResponse.statusText}`);
-        const bookData = await bookResponse.json();
-        setBook({
-          ...bookData,
-          description: bookData.description || "No description available.",
-          longDescription: bookData.longDescription || "No additional details available.",
-          inStock: bookData.price > 0,
-        });
-
-        // Fetch related books
-        const booksResponse = await fetch(`${API_BASE_URL}api/auth/books`, {
-          headers: { Accept: "application/json" },
-        });
-        if (!booksResponse.ok) throw new Error(`Failed to fetch related books: ${booksResponse.statusText}`);
-        const booksData = await booksResponse.json();
-        const filteredBooks = booksData
-          .filter((b) => b.id !== bookData.id)
-          .slice(0, 4)
-          .map((b) => ({ id: b.id, title: b.title, author: b.author, price: b.price, imagePath: b.imagePath }));
-        setRelatedBooks(filteredBooks);
-
-        // Fetch reviews
-        const reviewsResponse = await fetch(`${API_BASE_URL}api/Review/${id}`, {
-          headers: { Accept: "application/json" },
-        });
-        if (!reviewsResponse.ok) {
-          throw new Error(`Failed to fetch reviews: ${reviewsResponse.status} - ${reviewsResponse.statusText}`);
-        }
-        const reviewsData = await reviewsResponse.json();
-        console.log("Reviews data:", JSON.stringify(reviewsData, null, 2));
-        setReviews(reviewsData.reviews || []);
-        setReviewCount(reviewsData.reviewCount || 0);
-        setAverageRating(reviewsData.averageRating || 0);
-
-        // Fetch user orders if logged in
-        if (token) {
-          setOrdersLoading(true);
-          const ordersResponse = await fetch(`${API_BASE_URL}api/Order`, {
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          if (!ordersResponse.ok) {
-            if (ordersResponse.status === 401) {
-              localStorage.removeItem("token");
-              navigate("/login");
-              throw new Error("Session expired. Please log in again.");
-            }
-            throw new Error(`Failed to fetch orders: ${ordersResponse.status} - ${ordersResponse.statusText}`);
-          }
-          const ordersData = await ordersResponse.json();
-          setUserOrders(ordersData || []);
-          console.log("Orders data:", JSON.stringify(ordersData, null, 2));
-        }
-      } catch (err) {
-        setError(err.message);
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
-        setOrdersLoading(false);
+  // Fetch reviews with authentication handling
+  const fetchReviews = async () => {
+    try {
+      let headers = { Accept: "application/json" };
+      let currentToken = token;
+      
+      // First attempt
+      if (currentToken) {
+        headers.Authorization = `Bearer ${currentToken}`;
       }
-    };
 
+      let response = await fetch(`${API_BASE_URL}api/Review/${id}`, { headers });
+      
+      // If unauthorized and we have a token, try refreshing
+      if (response.status === 401 && currentToken) {
+        currentToken = await refreshToken();
+        headers.Authorization = `Bearer ${currentToken}`;
+        response = await fetch(`${API_BASE_URL}api/Review/${id}`, { headers });
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch reviews: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error("Review fetch error:", err);
+      throw err;
+    }
+  };
+
+  // Main data fetching function
+  const fetchData = async () => {
+    try {
+      if (!id || id === "undefined") {
+        throw new Error("Invalid or missing book ID");
+      }
+
+      setLoading(true);
+      setError(null);
+
+      // Fetch book details (public)
+      const bookResponse = await fetch(`${API_BASE_URL}api/auth/books/${id}`);
+      if (!bookResponse.ok) throw new Error(`Book fetch failed: ${bookResponse.status}`);
+      const bookData = await bookResponse.json();
+      setBook({
+        ...bookData,
+        description: bookData.description || "No description available",
+        longDescription: bookData.longDescription || "No additional details",
+        inStock: bookData.price > 0
+      });
+
+      // Fetch related books (public)
+      const booksResponse = await fetch(`${API_BASE_URL}api/auth/books`);
+      if (!booksResponse.ok) throw new Error(`Related books fetch failed: ${booksResponse.status}`);
+      const booksData = await booksResponse.json();
+      setRelatedBooks(
+        booksData
+          .filter(b => b.id !== bookData.id)
+          .slice(0, 4)
+          .map(b => ({
+            id: b.id,
+            title: b.title,
+            author: b.author,
+            price: b.price,
+            imagePath: b.imagePath
+          }))
+      );
+
+      // Fetch reviews (protected)
+      const reviewsData = await fetchReviews();
+      setReviews(reviewsData.reviews || []);
+      setReviewCount(reviewsData.reviewCount || 0);
+      setAverageRating(reviewsData.averageRating || 0);
+
+      // Fetch user orders if authenticated (protected)
+      if (token) {
+        setOrdersLoading(true);
+        try {
+          let headers = { 
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`
+          };
+          
+          let response = await fetch(`${API_BASE_URL}api/Order`, { headers });
+          
+          if (response.status === 401) {
+            const newToken = await refreshToken();
+            headers.Authorization = `Bearer ${newToken}`;
+            response = await fetch(`${API_BASE_URL}api/Order`, { headers });
+          }
+
+          if (!response.ok) throw new Error(`Orders fetch failed: ${response.status}`);
+          
+          const ordersData = await response.json();
+          setUserOrders(ordersData || []);
+        } catch (err) {
+          console.error("Orders fetch error:", err);
+        } finally {
+          setOrdersLoading(false);
+        }
+      }
+    } catch (err) {
+      if (err.message.includes("401") && retryCount < 2) {
+        setRetryCount(c => c + 1);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return fetchData();
+      }
+      setError(err.message);
+      console.error("Data fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-  }, [id, token, navigate]);
+  }, [id, retryCount]);
 
   const handleQuantityChange = (newQuantity) => {
     if (newQuantity >= 1) setQuantity(newQuantity);
@@ -124,59 +178,57 @@ export default function ItemDetails() {
     setSubmitError(null);
 
     try {
-      const response = await axios.post(
+      let currentToken = token;
+      let headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${currentToken}`
+      };
+
+      // First attempt
+      let response = await axios.post(
         `${API_BASE_URL}api/Review`,
         { bookId: Number(id), rating, comment },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers }
       );
-      console.log("Review submission response:", JSON.stringify(response.data, null, 2));
 
-      // Refetch reviews after submission
-      const reviewsResponse = await fetch(`${API_BASE_URL}api/Review/${id}`, {
-        headers: { Accept: "application/json" },
-      });
-      if (!reviewsResponse.ok) {
-        throw new Error(`Failed to fetch updated reviews: ${reviewsResponse.status} - ${reviewsResponse.statusText}`);
+      // If unauthorized, refresh and retry
+      if (response.status === 401) {
+        currentToken = await refreshToken();
+        headers.Authorization = `Bearer ${currentToken}`;
+        response = await axios.post(
+          `${API_BASE_URL}api/Review`,
+          { bookId: Number(id), rating, comment },
+          { headers }
+        );
       }
-      const updatedReviewsData = await reviewsResponse.json();
-      console.log("Updated reviews data:", JSON.stringify(updatedReviewsData, null, 2));
-      setReviews(updatedReviewsData.reviews || []);
-      setReviewCount(updatedReviewsData.reviewCount || 0);
-      setAverageRating(updatedReviewsData.averageRating || 0);
+
+      console.log("Review submitted:", response.data);
+
+      // Refresh reviews after submission
+      const reviewsData = await fetchReviews();
+      setReviews(reviewsData.reviews || []);
+      setReviewCount(reviewsData.reviewCount || 0);
+      setAverageRating(reviewsData.averageRating || 0);
 
       setShowReviewForm(false);
       setRating(0);
       setComment("");
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        navigate("/login");
         setSubmitError("Session expired. Please log in again.");
       } else {
-        setSubmitError(err.response?.data || "Failed to submit review. Please try again.");
-        console.error("Review submission error:", err.response || err);
+        setSubmitError(err.response?.data?.message || "Failed to submit review");
       }
+      console.error("Review submission error:", err);
     } finally {
       setSubmitLoading(false);
     }
   };
 
   const numericId = Number(id);
-  console.log("Comparing book ID:", numericId);
-  userOrders.forEach((order) => {
-    console.log(
-      `Order ID: ${order.id}, Matches: ${order.id === numericId}, Purchased: ${order.hasPurchased || order.isPurchased}`
-    );
-  });
-
-  const hasPurchased = userOrders.some((order) => order.id === numericId && (order.hasPurchased || order.isPurchased));
-
-  console.log({ token, userOrders, hasPurchased });
+  const hasPurchased = userOrders.some(
+    order => order.id === numericId && (order.hasPurchased || order.isPurchased)
+  );
 
   if (loading) return <div className="min-h-screen bg-white flex items-center justify-center">Loading...</div>;
   if (error) return <div className="min-h-screen bg-white flex items-center justify-center">Error: {error}</div>;
@@ -185,6 +237,7 @@ export default function ItemDetails() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Breadcrumb navigation */}
         <div className="flex items-center text-sm text-gray-500 mb-8">
           <a href="/" className="hover:text-blue-500">Home</a>
           <span className="mx-2">/</span>
@@ -197,11 +250,26 @@ export default function ItemDetails() {
           <FaArrowLeft className="mr-2" /> Back to Books
         </a>
 
+        {/* Main content */}
         <div className="flex flex-col md:flex-row gap-8 mb-12">
+          {/* Book image */}
           <div className="md:w-1/3">
             <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center h-full">
               {book.imagePath ? (
-                <img src={`${API_BASE_URL}${book.imagePath}`} alt={book.title} className="max-h-96 object-contain" />
+                <img 
+                  src={`${API_BASE_URL}${book.imagePath}`} 
+                  alt={book.title} 
+                  className="max-h-96 object-contain"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.parentElement.innerHTML = `
+                      <div class="flex flex-col items-center justify-center text-gray-400">
+                        <FaBookOpen size={64} />
+                        <p class="mt-2">Cover Image</p>
+                      </div>
+                    `;
+                  }}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center text-gray-400">
                   <FaBookOpen size={64} />
@@ -211,23 +279,30 @@ export default function ItemDetails() {
             </div>
           </div>
 
+          {/* Book details */}
           <div className="md:w-2/3">
             <h1 className="text-3xl font-bold mb-2">{book.title}</h1>
             <div className="text-xl text-gray-600 mb-4">by {book.author}</div>
 
+            {/* Rating */}
             <div className="flex items-center mb-4">
               <div className="flex text-yellow-400 mr-2">
                 {[...Array(5)].map((_, i) => (
-                  <FaStar key={i} className={i < Math.round(averageRating) ? "text-yellow-400" : "text-gray-300"} />
+                  <FaStar 
+                    key={i} 
+                    className={i < Math.round(averageRating) ? "text-yellow-400" : "text-gray-300"} 
+                  />
                 ))}
               </div>
               <span className="text-gray-600">({reviewCount} reviews)</span>
             </div>
 
+            {/* Price */}
             <div className="flex items-baseline mb-6">
               <span className="text-3xl font-bold text-blue-600">${book.price}</span>
             </div>
 
+            {/* Details grid */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 border border-gray-200 rounded-lg">
                 <div className="text-gray-500 text-sm">Title</div>
@@ -247,6 +322,7 @@ export default function ItemDetails() {
               </div>
             </div>
 
+            {/* Quantity and buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-8">
               <div className="flex border border-gray-300 rounded-md">
                 <button
@@ -255,7 +331,9 @@ export default function ItemDetails() {
                 >
                   -
                 </button>
-                <div className="px-4 py-2 border-l border-r border-gray-300 min-w-16 text-center">{quantity}</div>
+                <div className="px-4 py-2 border-l border-r border-gray-300 min-w-16 text-center">
+                  {quantity}
+                </div>
                 <button
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 transition rounded-r-md"
                   onClick={() => handleQuantityChange(quantity + 1)}
@@ -273,13 +351,15 @@ export default function ItemDetails() {
               </button>
             </div>
 
+            {/* Stock status */}
             <div className="flex items-center text-sm">
-              <div className="w-3 h-3 rounded-full mr-2 ${book.inStock ? }"></div>
+              <div className={`w-3 h-3 rounded-full mr-2 ${book.inStock ? "bg-green-500" : "bg-red-500"}`}></div>
               <span>{book.inStock ? "In Stock" : "Out of Stock"}</span>
             </div>
           </div>
         </div>
 
+        {/* Tabs */}
         <div className="mb-12">
           <div className="flex border-b border-gray-200">
             <button
@@ -308,6 +388,7 @@ export default function ItemDetails() {
             </button>
           </div>
 
+          {/* Tab content */}
           <div className="py-6">
             {activeTab === "description" && (
               <div>
@@ -377,7 +458,7 @@ export default function ItemDetails() {
                         {[...Array(5)].map((_, i) => (
                           <FaStar
                             key={i}
-                            className={`cursor-pointer ${i < rating ? "text-yellow-400" : "text-gray-300"}`}
+                            className={`cursor-pointer text-2xl ${i < rating ? "text-yellow-400" : "text-gray-300"}`}
                             onClick={() => setRating(i + 1)}
                           />
                         ))}
@@ -392,86 +473,108 @@ export default function ItemDetails() {
                         required
                         maxLength={500}
                         rows={4}
+                        placeholder="Share your thoughts about this book..."
                       />
                     </div>
-                    <button
-                      type="submit"
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-                      disabled={submitLoading}
-                    >
-                      {submitLoading ? "Submitting..." : "Submit Review"}
-                    </button>
-                    {submitError && <p className="text-red-500 mt-2">{submitError}</p>}
-                    <button
-                      type="button"
-                      className="ml-4 text-gray-500 hover:text-gray-700"
-                      onClick={() => setShowReviewForm(false)}
-                    >
-                      Cancel
-                    </button>
+                    <div className="flex items-center">
+                      <button
+                        type="submit"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                        disabled={submitLoading}
+                      >
+                        {submitLoading ? "Submitting..." : "Submit Review"}
+                      </button>
+                      <button
+                        type="button"
+                        className="ml-4 text-gray-500 hover:text-gray-700"
+                        onClick={() => setShowReviewForm(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {submitError && (
+                      <p className="text-red-500 mt-2 text-sm">{submitError}</p>
+                    )}
                   </form>
                 )}
 
                 {reviews.length === 0 ? (
-                  <p className="text-gray-500">No reviews yet.</p>
+                  <p className="text-gray-500">No reviews yet. Be the first to review!</p>
                 ) : (
-                  reviews.map((review) => {
-                    const reviewId = review.id || `review-${Math.random().toString(36).substr(2, 9)}`;
-                    const reviewRating = review.rating || 0;
-                    const reviewComment = review.comment || "";
-                    const reviewDate = review.datePosted
-                      ? new Date(review.datePosted).toLocaleDateString()
-                      : "Invalid Date";
-                    const userName = review.userName || "Anonymous";
+                  <div className="space-y-6">
+                    {reviews.map((review) => {
+                      const reviewDate = review.datePosted
+                        ? new Date(review.datePosted).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : "Unknown date";
 
-                    return (
-                      <div key={reviewId} className="border-b border-gray-200 pb-6 mb-6">
-                        <div className="flex items-center mb-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold mr-3">
-                            {userName.charAt(0).toUpperCase()}
-                            {userName.split(" ")[1]?.charAt(0).toUpperCase() || ""}
+                      return (
+                        <div key={review.id} className="border-b border-gray-200 pb-6 last:border-0">
+                          <div className="flex items-center mb-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold mr-3">
+                              {(review.userName || "A").charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {review.userName || "Anonymous"}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Verified Purchase • {reviewDate}
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">{userName}</div>
-                            <div className="text-sm text-gray-500">Verified Purchase</div>
+                          <div className="flex text-yellow-400 mb-2">
+                            {[...Array(5)].map((_, i) => (
+                              <FaStar
+                                key={i}
+                                className={i < review.rating ? "text-yellow-400" : "text-gray-300"}
+                              />
+                            ))}
                           </div>
+                          <p className="text-gray-700 whitespace-pre-line">
+                            {review.comment || "No review text provided"}
+                          </p>
                         </div>
-                        <div className="flex text-yellow-400 mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <FaStar key={i} className={i < reviewRating ? "text-yellow-400" : "text-gray-300"} />
-                          ))}
-                        </div>
-                        <h4 className="font-medium mb-2">
-                          {reviewComment ? reviewComment.split("\n")[0] : "No comment provided"}
-                        </h4>
-                        <p className="text-gray-600 mb-2">
-                          {reviewComment ? reviewComment.split("\n").slice(1).join("\n") : ""}
-                        </p>
-                        <div className="text-sm text-gray-500">{reviewDate}</div>
-                      </div>
-                    );
-                  })
-                )}
-
-                {reviews.length > 0 && (
-                  <button className="text-blue-500 hover:text-blue-700 font-medium">Load More Reviews</button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
           </div>
         </div>
 
+        {/* Related books */}
         <div>
           <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {relatedBooks.map((relatedBook) => (
               <div key={relatedBook.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                <a href={`/books/${relatedBook.id}`}>
-                  <div className="h-48 bg-gray-100 flex items-center justify-center">
+                <a href={`/books/${relatedBook.id}`} className="block">
+                  <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
                     {relatedBook.imagePath ? (
-                      <img src={`${API_BASE_URL}${relatedBook.imagePath}`} alt={relatedBook.title} className="h-full w-full object-contain" />
+                      <img
+                        src={`${API_BASE_URL}${relatedBook.imagePath}`}
+                        alt={relatedBook.title}
+                        className="h-full w-full object-contain"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.parentElement.innerHTML = `
+                            <div class="flex flex-col items-center justify-center text-gray-400">
+                              <FaBookOpen size={48} />
+                              <p class="mt-2">Cover Image</p>
+                            </div>
+                          `;
+                        }}
+                      />
                     ) : (
-                      <FaBookOpen size={48} className="text-gray-400" />
+                      <div className="flex flex-col items-center justify-center text-gray-400">
+                        <FaBookOpen size={48} />
+                        <p className="mt-2">Cover Image</p>
+                      </div>
                     )}
                   </div>
                   <div className="p-4">
