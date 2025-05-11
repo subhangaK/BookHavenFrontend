@@ -7,13 +7,13 @@ import {
   FaArrowLeft,
   FaHeart,
   FaLock,
+  FaTruck,
 } from "react-icons/fa";
 import ProductCard, { FavoritesProvider } from "./ProductCard";
 
 const Checkout = () => {
   const [cartBooks, setCartBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingOut, setIsCheckingOut] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
@@ -29,7 +29,7 @@ const Checkout = () => {
           return;
         }
 
-        const response = await axios.get("https://localhost:7189/api/cart", {
+        const response = await axios.get("https://localhost:7189/api/Cart", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "*/*",
@@ -50,7 +50,7 @@ const Checkout = () => {
             author: book.author,
             price: book.price,
             imagePath: book.imagePath,
-            quantity: 1,
+            quantity: 1, // Default quantity
           }))
         );
       } catch (error) {
@@ -78,7 +78,7 @@ const Checkout = () => {
         return;
       }
 
-      await axios.delete(`https://localhost:7189/api/cart/remove/${bookId}`, {
+      await axios.delete(`https://localhost:7189/api/Cart/remove/${bookId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "*/*",
@@ -99,15 +99,6 @@ const Checkout = () => {
     }
   };
 
-  const updateQuantity = (bookId, newQuantity) => {
-    if (newQuantity < 1) return;
-    setCartBooks((prev) =>
-      prev.map((book) =>
-        book.id === bookId ? { ...book, quantity: newQuantity } : book
-      )
-    );
-  };
-
   const addToWishlist = async (bookId) => {
     try {
       const token = localStorage.getItem("token");
@@ -117,7 +108,7 @@ const Checkout = () => {
       }
 
       await axios.post(
-        "https://localhost:7189/api/wishlist/add",
+        "https://localhost:7189/api/Wishlist/add",
         { bookId: bookId },
         {
           headers: {
@@ -155,46 +146,28 @@ const Checkout = () => {
       return;
     }
 
-    setIsCheckingOut(book.id);
     try {
-      console.log("Attempting checkout with BookId:", book.id);
-      // Check if the book is already in the order to prevent duplicate orders
-      const orderCheck = await axios.get("https://localhost:7189/api/order", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "*/*",
-        },
-      });
-
-      const bookInOrder = orderCheck.data.some((item) => item.bookId === book.id);
-      if (bookInOrder && book.quantity > 1) {
-        alert("This book is already in your order. Only one order per book is allowed.");
-        return;
-      }
-
-      for (let i = 0; i < book.quantity; i++) {
-        const response = await axios.post(
-          "https://localhost:7189/api/order/add",
-          { bookId: book.id },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-              Accept: "*/*",
-            },
-          }
-        );
-        console.log("Checkout response:", response.data);
-      }
-      alert("Book added to order. Bill and claim code sent to your email.");
-      await removeFromCart(book.id);
+      await axios.post(
+        "https://localhost:7189/api/Order/add",
+        { bookId: book.id, quantity: book.quantity },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
+      alert(`Book "${book.title}" added to order successfully!`);
       navigate("/order");
+      // Remove from cart after successful checkout
+      await removeFromCart(book.id);
     } catch (error) {
-      console.error("Error adding to order:", error.response ? error.response.data : error.message);
+      console.error("Error adding to order:", error);
       if (error.response?.status === 404) {
-        alert("Book not found or endpoint unavailable. Please ensure the book exists.");
+        alert("Book not found.");
       } else if (error.response?.status === 400) {
-        alert("Book already in order. Only one order per book is allowed.");
+        alert("Book already in order or invalid request.");
       } else if (error.response?.status === 401) {
         alert("Session expired. Please log in again.");
         localStorage.removeItem("token");
@@ -202,8 +175,6 @@ const Checkout = () => {
       } else {
         alert("Failed to add book to order. Please try again.");
       }
-    } finally {
-      setIsCheckingOut(null);
     }
   };
 
@@ -217,6 +188,7 @@ const Checkout = () => {
   return (
     <FavoritesProvider>
       <div className="bg-gray-50 min-h-screen">
+        {/* Breadcrumb navigation */}
         <div className="bg-white border-b shadow-sm">
           <div className="container mx-auto px-4 py-3">
             <nav className="flex text-sm">
@@ -301,6 +273,7 @@ const Checkout = () => {
           ) : (
             <>
               <div className="flex flex-col lg:flex-row gap-8">
+                {/* Cart Items */}
                 <div className="lg:w-2/3">
                   <div className="bg-white rounded-lg shadow-sm border overflow-hidden mb-6">
                     <div className="border-b px-6 py-4">
@@ -312,6 +285,7 @@ const Checkout = () => {
                     {cartBooks.map((book) => (
                       <div key={book.id} className="border-b last:border-0">
                         <div className="p-6 flex flex-col sm:flex-row">
+                          {/* Book image */}
                           <div className="w-full sm:w-24 h-24 mb-4 sm:mb-0 flex-shrink-0">
                             {book.imagePath ? (
                               <img
@@ -328,6 +302,7 @@ const Checkout = () => {
                             )}
                           </div>
 
+                          {/* Book details */}
                           <div className="flex-grow sm:ml-6">
                             <div className="flex flex-col sm:flex-row justify-between">
                               <div>
@@ -346,13 +321,13 @@ const Checkout = () => {
                               </div>
                               <div className="mt-4 sm:mt-0 text-right">
                                 <div className="font-bold text-gray-900">
-                                  ${book.price.toFixed(2)} x {book.quantity} = $
-                                  {(book.price * book.quantity).toFixed(2)}
+                                  ${book.price.toFixed(2)}
                                 </div>
                               </div>
                             </div>
 
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4">
+                              {/* Action buttons */}
                               <div className="flex space-x-3">
                                 <button
                                   onClick={() => addToWishlist(book.id)}
@@ -370,17 +345,11 @@ const Checkout = () => {
                                 </button>
                                 <button
                                   onClick={() => handleCheckout(book)}
-                                  disabled={isCheckingOut === book.id}
-                                  className={`text-sm px-3 py-1 rounded-md flex items-center ${
-                                    isCheckingOut === book.id
-                                      ? "bg-gray-400 text-white cursor-not-allowed"
-                                      : "bg-indigo-600 text-white hover:bg-indigo-700"
-                                  }`}
+                                  className="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 flex items-center"
                                 >
                                   <FaLock className="mr-1" />
-                                  {isCheckingOut === book.id
-                                    ? "Processing..."
-                                    : `Checkout ($${(book.price * book.quantity).toFixed(2)})`}
+                                  Checkout ($
+                                  {(book.price * book.quantity).toFixed(2)})
                                 </button>
                               </div>
                             </div>
@@ -391,6 +360,7 @@ const Checkout = () => {
                   </div>
                 </div>
 
+                {/* Order Summary */}
                 <div className="lg:w-1/3">
                   <div className="bg-white rounded-lg shadow-sm border overflow-hidden sticky top-6">
                     <div className="border-b px-6 py-4">
@@ -400,6 +370,7 @@ const Checkout = () => {
                     </div>
 
                     <div className="p-6">
+                      {/* Price breakdown */}
                       <div className="border-b pb-4">
                         <div className="flex justify-between mb-2">
                           <span className="text-gray-600">Subtotal</span>
@@ -409,6 +380,7 @@ const Checkout = () => {
                         </div>
                       </div>
 
+                      {/* Total */}
                       <div className="pt-4 mb-6">
                         <div className="flex justify-between">
                           <span className="text-lg font-bold text-gray-800">
