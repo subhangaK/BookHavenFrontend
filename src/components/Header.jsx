@@ -1,14 +1,77 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { FaSearch, FaHeart, FaShoppingCart, FaUserCircle } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 const Header = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0); // Dynamic wishlist count
+  const [cartCount, setCartCount] = useState(0); // Dynamic cart count
   const { user, roles, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // Fetch wishlist and cart counts when user changes (login/logout)
+  useEffect(() => {
+    const fetchCounts = async () => {
+      const token = localStorage.getItem("token");
+      if (!token || !user) {
+        setWishlistCount(0);
+        setCartCount(0);
+        return;
+      }
+
+      // Fetch wishlist
+      try {
+        const wishlistResponse = await axios.get(
+          "https://localhost:7189/api/Wishlist",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "*/*",
+            },
+          }
+        );
+
+        if (Array.isArray(wishlistResponse.data)) {
+          setWishlistCount(wishlistResponse.data.length);
+        } else {
+          console.error("Expected an array for wishlist, got:", wishlistResponse.data);
+          setWishlistCount(0);
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist count:", error);
+        setWishlistCount(0);
+      }
+
+      // Fetch cart
+      try {
+        const cartResponse = await axios.get(
+          "https://localhost:7189/api/cart",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "*/*",
+            },
+          }
+        );
+
+        if (Array.isArray(cartResponse.data)) {
+          setCartCount(cartResponse.data.length);
+        } else {
+          console.error("Expected an array for cart, got:", cartResponse.data);
+          setCartCount(0);
+        }
+      } catch (error) {
+        console.error("Error fetching cart count:", error);
+        setCartCount(0);
+      }
+    };
+
+    fetchCounts();
+  }, [user]);
 
   const HeaderSearchBar = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -16,7 +79,7 @@ const Header = () => {
     const handleSearchSubmit = (e) => {
       if (e.key === 'Enter' && searchQuery.trim()) {
         navigate(`/ProductPage?search=${encodeURIComponent(searchQuery.trim())}`);
-        setSearchQuery(''); // Clear the search input
+        setSearchQuery('');
       }
     };
 
@@ -66,7 +129,7 @@ const Header = () => {
                 Products
               </Link>
               <Link
-                to="/Whishlist"
+                to="/whishlist"
                 className="text-gray-600 hover:text-blue-600 transition duration-300"
               >
                 Whishlist
@@ -84,19 +147,23 @@ const Header = () => {
             <HeaderSearchBar />
 
             <div className="flex items-center space-x-4">
-              <button className="relative text-gray-600 hover:text-blue-600 transition duration-300">
+              <Link to="/whishlist" className="relative text-gray-600 hover:text-blue-600 transition duration-300">
                 <FaHeart className="text-xl" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  3
-                </span>
-              </button>
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
 
-              <button className="relative text-gray-600 hover:text-blue-600 transition duration-300">
+              <Link to="/cart" className="relative text-gray-600 hover:text-blue-600 transition duration-300">
                 <FaShoppingCart className="text-xl" />
-                <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  2
-                </span>
-              </button>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
 
               <div className="relative">
                 <button
@@ -126,7 +193,7 @@ const Header = () => {
                             Admin Dashboard
                           </Link>
                         )}
-                        {roles.includes('SuperAdmin') && (
+                        {roles.includes('Staff') && (
                           <Link
                             to="/AdminOrder"
                             className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
