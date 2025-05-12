@@ -110,12 +110,6 @@ const Header = () => {
               >
                 Whishlist
               </Link>
-              <Link
-                to="/best-sellers"
-                className="text-gray-600 hover:text-blue-600 transition duration-300"
-              >
-                Best Sellers
-              </Link>
             </nav>
           </div>
 
