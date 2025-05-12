@@ -24,6 +24,9 @@ import Order from "./components/Order";
 import ItemDetails from "./components/ItemDetail";
 import AdminOrderPage from "./components/AdminOrder";
 import AdminContact from "./components/AdminContact";
+import AdminBanner from "./components/AdminBanner";
+import { NotificationProvider } from "./context/NotificationContext"; // Make sure this path is correct
+
 
 // Component to handle conditional rendering of Header and Footer
 function Layout() {
@@ -51,6 +54,9 @@ function Layout() {
         <Route path="/order" element={<Order />} />
         <Route path="/books/:id" element={<ItemDetails />} />
         <Route path="/admincontact" element={<AdminContact />} />
+        <Route path="/adminbanner" element={<AdminBanner />} />
+        <Route path="/order" element={<Order/>} />
+        <Route path="/books/:id" element={<ItemDetails/>} />
       </Routes>
       {!excludeHeaderFooter && <Footer />}
     </>
@@ -60,10 +66,14 @@ function Layout() {
 function App() {
   return (
     <AuthProvider>
+            <NotificationProvider>
+
       <Router>
         <Layout />
         <ToastContainer />
       </Router>
+                  </NotificationProvider>
+
     </AuthProvider>
   );
 }
