@@ -24,6 +24,10 @@ const AddBookModal = memo(({ showAddModal, setShowAddModal, newBook, setNewBook,
               description: "",
               category: "",
               image: null,
+              isOnSale: false,
+              discountPercentage: "",
+              saleStartDate: "",
+              saleEndDate: "",
             });
             setAddErrors({});
           }}
@@ -195,6 +199,74 @@ const AddBookModal = memo(({ showAddModal, setShowAddModal, newBook, setNewBook,
             <p className="text-red-500 text-xs mt-1">{addErrors.category}</p>
           )}
         </div>
+        <div className="md:col-span-2">
+          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+            <input
+              type="checkbox"
+              name="isOnSale"
+              checked={newBook.isOnSale}
+              onChange={(e) => handleInputChange(e)}
+              className="mr-2"
+            />
+            On Sale
+          </label>
+        </div>
+        {newBook.isOnSale && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Discount Percentage
+              </label>
+              <input
+                type="number"
+                name="discountPercentage"
+                value={newBook.discountPercentage}
+                onChange={(e) => handleInputChange(e)}
+                className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  addErrors.discountPercentage ? "border-red-500" : ""
+                }`}
+                placeholder="Discount %"
+              />
+              {addErrors.discountPercentage && (
+                <p className="text-red-500 text-xs mt-1">{addErrors.discountPercentage}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sale Start Date
+              </label>
+              <input
+                type="date"
+                name="saleStartDate"
+                value={newBook.saleStartDate}
+                onChange={(e) => handleInputChange(e)}
+                className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  addErrors.saleStartDate ? "border-red-500" : ""
+                }`}
+              />
+              {addErrors.saleStartDate && (
+                <p className="text-red-500 text-xs mt-1">{addErrors.saleStartDate}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sale End Date
+              </label>
+              <input
+                type="date"
+                name="saleEndDate"
+                value={newBook.saleEndDate}
+                onChange={(e) => handleInputChange(e)}
+                className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  addErrors.saleEndDate ? "border-red-500" : ""
+                }`}
+              />
+              {addErrors.saleEndDate && (
+                <p className="text-red-500 text-xs mt-1">{addErrors.saleEndDate}</p>
+              )}
+            </div>
+          </>
+        )}
       </div>
       <div className="mt-6 flex justify-end">
         <button
@@ -398,6 +470,74 @@ const EditBookModal = memo(({ showEditModal, setShowEditModal, selectedBook, set
               <p className="text-red-500 text-xs mt-1">{editErrors.category}</p>
             )}
           </div>
+          <div className="md:col-span-2">
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <input
+                type="checkbox"
+                name="isOnSale"
+                checked={selectedBook.isOnSale}
+                onChange={(e) => handleInputChange(e, true)}
+                className="mr-2"
+              />
+              On Sale
+            </label>
+          </div>
+          {selectedBook.isOnSale && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Discount Percentage
+                </label>
+                <input
+                  type="number"
+                  name="discountPercentage"
+                  value={selectedBook.discountPercentage}
+                  onChange={(e) => handleInputChange(e, true)}
+                  className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    editErrors.discountPercentage ? "border-red-500" : ""
+                  }`}
+                  placeholder="Discount %"
+                />
+                {editErrors.discountPercentage && (
+                  <p className="text-red-500 text-xs mt-1">{editErrors.discountPercentage}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sale Start Date
+                </label>
+                <input
+                  type="date"
+                  name="saleStartDate"
+                  value={selectedBook.saleStartDate}
+                  onChange={(e) => handleInputChange(e, true)}
+                  className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    editErrors.saleStartDate ? "border-red-500" : ""
+                  }`}
+                />
+                {editErrors.saleStartDate && (
+                  <p className="text-red-500 text-xs mt-1">{editErrors.saleStartDate}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sale End Date
+                </label>
+                <input
+                  type="date"
+                  name="saleEndDate"
+                  value={selectedBook.saleEndDate}
+                  onChange={(e) => handleInputChange(e, true)}
+                  className={`w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    editErrors.saleEndDate ? "border-red-500" : ""
+                  }`}
+                />
+                {editErrors.saleEndDate && (
+                  <p className="text-red-500 text-xs mt-1">{editErrors.saleEndDate}</p>
+                )}
+              </div>
+            </>
+          )}
         </div>
         <div className="mt-6 flex justify-end">
           <button
@@ -471,6 +611,10 @@ export default function BookAdminDashboard() {
     description: "",
     category: "",
     image: null,
+    isOnSale: false,
+    discountPercentage: "",
+    saleStartDate: "",
+    saleEndDate: "",
   });
   const [imagePreview, setImagePreview] = useState("");
   const [editImagePreview, setEditImagePreview] = useState("");
@@ -495,6 +639,10 @@ export default function BookAdminDashboard() {
         description: book.description,
         category: book.category,
         imagePath: book.imagePath,
+        isOnSale: book.isOnSale,
+        discountPercentage: book.discountPercentage,
+        saleStartDate: book.saleStartDate ? book.saleStartDate.split("T")[0] : "",
+        saleEndDate: book.saleEndDate ? book.saleEndDate.split("T")[0] : "",
       }));
       setBooks(mappedBooks);
     } catch (error) {
@@ -507,22 +655,27 @@ export default function BookAdminDashboard() {
   };
 
   const handleInputChange = (e, isEdit = false) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+
+    const newValue =
+      type === "checkbox"
+        ? checked
+        : name === "publicationYear" || name === "price" || name === "discountPercentage"
+        ? value === ""
+          ? ""
+          : parseFloat(value) || value
+        : value;
 
     if (isEdit) {
       setSelectedBook((prev) => ({
         ...prev,
-        [name]: name === "publicationYear" || name === "price"
-          ? value === "" ? "" : parseFloat(value) || value
-          : value,
+        [name]: newValue,
       }));
       setEditErrors((prev) => ({ ...prev, [name]: "" }));
     } else {
       setNewBook((prev) => ({
         ...prev,
-        [name]: name === "publicationYear" || name === "price"
-          ? value === "" ? "" : parseFloat(value) || value
-          : value,
+        [name]: newValue,
       }));
       setAddErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -581,153 +734,196 @@ export default function BookAdminDashboard() {
     if (!book.description) errors.description = "Description is required";
     if (!book.category) errors.category = "Category is required";
 
+    if (book.isOnSale) {
+      if (!book.discountPercentage) {
+        errors.discountPercentage = "Discount percentage is required";
+      } else if (isNaN(book.discountPercentage) || book.discountPercentage <= 0 || book.discountPercentage > 100) {
+        errors.discountPercentage = "Discount must be between 1 and 100";
+      }
+
+      if (!book.saleStartDate) {
+        errors.saleStartDate = "Sale start date is required";
+      }
+
+      if (!book.saleEndDate) {
+        errors.saleEndDate = "Sale end date is required";
+      } else if (book.saleStartDate && new Date(book.saleEndDate) <= new Date(book.saleStartDate)) {
+        errors.saleEndDate = "Sale end date must be after start date";
+      }
+    }
+
     return errors;
   };
 
-  const handleAddBook = async () => {
-    const errors = validateBook(newBook);
-    if (Object.keys(errors).length > 0) {
-      setAddErrors(errors);
-      toast.error("Please fix the errors before submitting.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      return;
-    }
+ const handleAddBook = async () => {
+  const errors = validateBook(newBook);
+  if (Object.keys(errors).length > 0) {
+    setAddErrors(errors);
+    toast.error("Please fix the errors before submitting.", {
+      position: "top-right",
+      autoClose: 3000,
+    });
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append("Title", newBook.title);
-    formData.append("Author", newBook.author);
-    formData.append("ISBN", newBook.isbn);
-    formData.append("Price", newBook.price.toString());
-    formData.append("PublicationYear", newBook.publicationYear.toString());
-    formData.append("Description", newBook.description);
-    formData.append("Category", newBook.category);
-    if (newBook.image) {
-      formData.append("Image", newBook.image);
-    }
+  const formData = new FormData();
+  formData.append("Title", newBook.title);
+  formData.append("Author", newBook.author);
+  formData.append("ISBN", newBook.isbn);
+  formData.append("Price", newBook.price.toString());
+  formData.append("PublicationYear", newBook.publicationYear.toString());
+  formData.append("Description", newBook.description);
+  formData.append("Category", newBook.category);
+  formData.append("IsOnSale", newBook.isOnSale.toString());
+  if (newBook.isOnSale) {
+    formData.append("DiscountPercentage", newBook.discountPercentage.toString());
+    formData.append("SaleStartDate", new Date(newBook.saleStartDate).toISOString());
+    formData.append("SaleEndDate", new Date(newBook.saleEndDate).toISOString());
+  }
+  if (newBook.image) {
+    formData.append("Image", newBook.image);
+  }
 
-    try {
-      const response = await axios.post(
-        "https://localhost:7189/api/Auth/books",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      const addedBook = response.data;
-      setBooks([
-        ...books,
-        {
-          id: addedBook.id,
-          title: addedBook.title,
-          author: addedBook.author,
-          isbn: addedBook.isbn,
-          publicationYear: addedBook.publicationYear,
-          price: addedBook.price,
-          description: addedBook.description,
-          category: addedBook.category,
-          imagePath: addedBook.imagePath,
+  try {
+    const response = await axios.post(
+      "https://localhost:7189/api/Auth/books",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
         },
-      ]);
-      setNewBook({
-        title: "",
-        author: "",
-        isbn: "",
-        publicationYear: "",
-        price: "",
-        description: "",
-        category: "",
-        image: null,
-      });
-      setImagePreview("");
-      setShowAddModal(false);
-      setAddErrors({});
-      toast.success("Book added successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    } catch (error) {
-      console.error("Error adding book:", error);
-      toast.error("Failed to add book. Please try again.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-  };
+      }
+    );
+    const addedBook = response.data;
+    setBooks([
+      ...books,
+      {
+        id: addedBook.id,
+        title: addedBook.title,
+        author: addedBook.author,
+        isbn: addedBook.isbn,
+        publicationYear: addedBook.publicationYear,
+        price: addedBook.price,
+        description: addedBook.description,
+        category: addedBook.category,
+        imagePath: addedBook.imagePath,
+        isOnSale: addedBook.isOnSale,
+        discountPercentage: addedBook.discountPercentage,
+        saleStartDate: addedBook.saleStartDate ? addedBook.saleStartDate.split("T")[0] : "",
+        saleEndDate: addedBook.saleEndDate ? addedBook.saleEndDate.split("T")[0] : "",
+      },
+    ]);
+    setNewBook({
+      title: "",
+      author: "",
+      isbn: "",
+      publicationYear: "",
+      price: "",
+      description: "",
+      category: "",
+      image: null,
+      isOnSale: false,
+      discountPercentage: "",
+      saleStartDate: "",
+      saleEndDate: "",
+    });
+    setImagePreview("");
+    setShowAddModal(false);
+    setAddErrors({});
+    toast.success("Book added successfully!", {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  } catch (error) {
+    console.error("Error adding book:", error);
+    const errorMessage = error.response?.data?.errors?.[0]?.description || "Failed to add book. Please try again.";
+    toast.error(errorMessage, {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  }
+};
 
-  const handleUpdateBook = async () => {
-    const errors = validateBook(selectedBook);
-    if (Object.keys(errors).length > 0) {
-      setEditErrors(errors);
-      toast.error("Please fix the errors before submitting.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      return;
-    }
+const handleUpdateBook = async () => {
+  const errors = validateBook(selectedBook);
+  if (Object.keys(errors).length > 0) {
+    setEditErrors(errors);
+    toast.error("Please fix the errors before submitting.", {
+      position: "top-right",
+      autoClose: 3000,
+    });
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append("Title", selectedBook.title);
-    formData.append("Author", selectedBook.author);
-    formData.append("ISBN", selectedBook.isbn);
-    formData.append("Price", selectedBook.price.toString());
-    formData.append("PublicationYear", selectedBook.publicationYear.toString());
-    formData.append("Description", selectedBook.description);
-    formData.append("Category", selectedBook.category);
-    if (selectedBook.image) {
-      formData.append("Image", selectedBook.image);
-    }
+  const formData = new FormData();
+  formData.append("Title", selectedBook.title);
+  formData.append("Author", selectedBook.author);
+  formData.append("ISBN", selectedBook.isbn);
+  formData.append("Price", selectedBook.price.toString());
+  formData.append("PublicationYear", selectedBook.publicationYear.toString());
+  formData.append("Description", selectedBook.description);
+  formData.append("Category", selectedBook.category);
+  formData.append("IsOnSale", selectedBook.isOnSale.toString());
+  if (selectedBook.isOnSale) {
+    formData.append("DiscountPercentage", selectedBook.discountPercentage.toString());
+    formData.append("SaleStartDate", new Date(selectedBook.saleStartDate).toISOString());
+    formData.append("SaleEndDate", new Date(selectedBook.saleEndDate).toISOString());
+  }
+  if (selectedBook.image) {
+    formData.append("Image", selectedBook.image);
+  }
 
-    try {
-      const response = await axios.post(
-        `https://localhost:7189/api/Auth/books/${selectedBook.id}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      const updatedBook = response.data;
-      setBooks(
-        books.map((book) =>
-          book.id === selectedBook.id
-            ? {
-                id: updatedBook.id,
-                title: updatedBook.title,
-                author: updatedBook.author,
-                isbn: updatedBook.isbn,
-                publicationYear: updatedBook.publicationYear,
-                price: updatedBook.price,
-                description: updatedBook.description,
-                category: updatedBook.category,
-                imagePath: updatedBook.imagePath,
-              }
-            : book
-        )
-      );
-      setSelectedBook(null);
-      setEditImagePreview("");
-      setShowEditModal(false);
-      setEditErrors({});
-      toast.success("Book updated successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    } catch (error) {
-      console.error("Error updating book:", error);
-      toast.error("Failed to update book. Please try again.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    }
-  };
-
+  try {
+    const response = await axios.post(
+      `https://localhost:7189/api/Auth/books/${selectedBook.id}`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    const updatedBook = response.data;
+    setBooks(
+      books.map((book) =>
+        book.id === selectedBook.id
+          ? {
+              id: updatedBook.id,
+              title: updatedBook.title,
+              author: updatedBook.author,
+              isbn: updatedBook.isbn,
+              publicationYear: updatedBook.publicationYear,
+              price: updatedBook.price,
+              description: updatedBook.description,
+              category: updatedBook.category,
+              imagePath: updatedBook.imagePath,
+              isOnSale: updatedBook.isOnSale,
+              discountPercentage: updatedBook.discountPercentage,
+              saleStartDate: updatedBook.saleStartDate ? updatedBook.saleStartDate.split("T")[0] : "",
+              saleEndDate: updatedBook.saleEndDate ? updatedBook.saleEndDate.split("T")[0] : "",
+            }
+          : book
+      )
+    );
+    setSelectedBook(null);
+    setEditImagePreview("");
+    setShowEditModal(false);
+    setEditErrors({});
+    toast.success("Book updated successfully!", {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  } catch (error) {
+    console.error("Error updating book:", error);
+    const errorMessage = error.response?.data?.errors?.[0]?.description || "Failed to update book. Please try again.";
+    toast.error(errorMessage, {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  }
+};
   const handleDeleteBook = async () => {
     try {
       await axios.delete(
@@ -755,7 +951,12 @@ export default function BookAdminDashboard() {
   };
 
   const openEditModal = (book) => {
-    setSelectedBook({ ...book, image: null });
+    setSelectedBook({
+      ...book,
+      image: null,
+      saleStartDate: book.saleStartDate || "",
+      saleEndDate: book.saleEndDate || "",
+    });
     setEditImagePreview(book.imagePath ? `https://localhost:7189${book.imagePath}` : "");
     setShowEditModal(true);
     setEditErrors({});
@@ -827,6 +1028,9 @@ export default function BookAdminDashboard() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Category
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sale Status
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -853,8 +1057,29 @@ export default function BookAdminDashboard() {
                     <td className="px-6 py-4">{book.author}</td>
                     <td className="px-6 py-4">{book.isbn}</td>
                     <td className="px-6 py-4">{book.publicationYear}</td>
-                    <td className="px-6 py-4">{book.price}</td>
+                    <td className="px-6 py-4">
+                      {book.isOnSale ? (
+                        <span>
+                          <span className="line-through text-gray-500 mr-2">${book.price}</span>
+                          ${(
+                            book.price -
+                            (book.price * book.discountPercentage) / 100
+                          ).toFixed(2)}
+                        </span>
+                      ) : (
+                        `$${book.price}`
+                      )}
+                    </td>
                     <td className="px-6 py-4">{book.category}</td>
+                    <td className="px-6 py-4">
+                      {book.isOnSale ? (
+                        <span className="text-green-600">
+                          On Sale ({book.discountPercentage}% off)
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">Not on Sale</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => openEditModal(book)}
@@ -873,7 +1098,7 @@ export default function BookAdminDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
                     No books found. Add a new book or try a different search term.
                   </td>
                 </tr>
