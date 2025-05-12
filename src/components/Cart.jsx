@@ -7,6 +7,9 @@ import {
   FaArrowLeft,
   FaHeart,
   FaLock,
+  FaTruck,
+  FaPlus,
+  FaMinus,
 } from "react-icons/fa";
 import ProductCard, { FavoritesProvider } from "./ProductCard";
 
@@ -50,7 +53,7 @@ const Checkout = () => {
             author: book.author,
             price: book.price,
             imagePath: book.imagePath,
-            quantity: 1,
+            quantity: book.quantity || 1,
           }))
         );
       } catch (error) {
@@ -78,12 +81,16 @@ const Checkout = () => {
         return;
       }
 
-      await axios.delete(`https://localhost:7189/api/cart/remove/${bookId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "*/*",
-        },
-      });
+      await axios.patch(
+        `https://localhost:7189/api/cart/remove/${bookId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
+        }
+      );
       setCartBooks((prev) => prev.filter((book) => book.id !== bookId));
     } catch (error) {
       console.error("Error removing from cart:", error);
@@ -99,13 +106,47 @@ const Checkout = () => {
     }
   };
 
-  const updateQuantity = (bookId, newQuantity) => {
+  const updateQuantity = async (bookId, newQuantity) => {
     if (newQuantity < 1) return;
-    setCartBooks((prev) =>
-      prev.map((book) =>
-        book.id === bookId ? { ...book, quantity: newQuantity } : book
-      )
-    );
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Please log in to manage your cart");
+        return;
+      }
+
+      await axios.patch(
+        `https://localhost:7189/api/cart/update-quantity/${bookId}`,
+        { quantity: newQuantity },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
+
+      setCartBooks((prev) =>
+        prev.map((book) =>
+          book.id === bookId ? { ...book, quantity: newQuantity } : book
+        )
+      );
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      if (error.response?.status === 401) {
+        setError("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else if (error.response?.status === 404) {
+        setError("Book not found in cart.");
+      } else if (error.response?.status === 400) {
+        setError("Invalid quantity provided.");
+      } else {
+        setError("Failed to update quantity. Please try again.");
+      }
+    }
   };
 
   const addToWishlist = async (bookId) => {
@@ -157,25 +198,59 @@ const Checkout = () => {
 
     setIsCheckingOut(book.id);
     try {
-      console.log("Attempting checkout with BookId:", book.id);
-      // Check if the book is already in the order to prevent duplicate orders
-      const orderCheck = await axios.get("https://localhost:7189/api/order", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "*/*",
-        },
-      });
-
-      const bookInOrder = orderCheck.data.some((item) => item.bookId === book.id);
-      if (bookInOrder && book.quantity > 1) {
-        alert("This book is already in your order. Only one order per book is allowed.");
-        return;
+      await axios.post(
+        "https://localhost:7189/api/order/add",
+        { bookId: book.id, quantity: book.quantity }, // Include quantity
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
+      alert(
+        `Book "${book.title}" added to order successfully! Bill and claim code sent to your email.`
+      );
+      await removeFromCart(book.id);
+      navigate("/order");
+    } catch (error) {
+      console.error(
+        "Error adding to order:",
+        error.response ? error.response.data : error.message
+      );
+      if (error.response?.status === 404) {
+        alert(
+          "Book not found or endpoint unavailable. Please ensure the book exists."
+        );
+      } else if (error.response?.status === 400) {
+        alert("Invalid request.");
+      } else if (error.response?.status === 401) {
+        alert("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        alert("Failed to add book to order. Please try again.");
       }
+    } finally {
+      setIsCheckingOut(null);
+    }
+  };
 
-      for (let i = 0; i < book.quantity; i++) {
-        const response = await axios.post(
+  const handleCheckoutAll = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in to place an order");
+      navigate("/login");
+      return;
+    }
+
+    setIsCheckingOut("all");
+    try {
+      for (const book of cartBooks) {
+        await axios.post(
           "https://localhost:7189/api/order/add",
-          { bookId: book.id },
+          { bookId: book.id, quantity: book.quantity },
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -184,23 +259,23 @@ const Checkout = () => {
             },
           }
         );
-        console.log("Checkout response:", response.data);
+        await removeFromCart(book.id);
       }
-      alert("Book added to order. Bill and claim code sent to your email.");
-      await removeFromCart(book.id);
+      alert(
+        "All items ordered successfully! Bill and claim code sent to your email."
+      );
       navigate("/order");
     } catch (error) {
-      console.error("Error adding to order:", error.response ? error.response.data : error.message);
-      if (error.response?.status === 404) {
-        alert("Book not found or endpoint unavailable. Please ensure the book exists.");
-      } else if (error.response?.status === 400) {
-        alert("Book already in order. Only one order per book is allowed.");
-      } else if (error.response?.status === 401) {
+      console.error(
+        "Error checking out all items:",
+        error.response ? error.response.data : error.message
+      );
+      if (error.response?.status === 401) {
         alert("Session expired. Please log in again.");
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        alert("Failed to add book to order. Please try again.");
+        alert("Failed to process order. Please try again.");
       }
     } finally {
       setIsCheckingOut(null);
@@ -346,14 +421,47 @@ const Checkout = () => {
                               </div>
                               <div className="mt-4 sm:mt-0 text-right">
                                 <div className="font-bold text-gray-900">
-                                  ${book.price.toFixed(2)} x {book.quantity} = $
-                                  {(book.price * book.quantity).toFixed(2)}
+                                  ${(book.price * book.quantity).toFixed(2)}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  (${book.price.toFixed(2)} each)
                                 </div>
                               </div>
                             </div>
 
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4">
-                              <div className="flex space-x-3">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex items-center border rounded">
+                                  <button
+                                    onClick={() =>
+                                      updateQuantity(book.id, book.quantity - 1)
+                                    }
+                                    className="p-2 text-gray-600 hover:text-indigo-600"
+                                    disabled={book.quantity <= 1}
+                                  >
+                                    <FaMinus />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    value={book.quantity}
+                                    onChange={(e) =>
+                                      updateQuantity(
+                                        book.id,
+                                        parseInt(e.target.value) || 1
+                                      )
+                                    }
+                                    className="w-16 text-center border-none focus:ring-0"
+                                    min="1"
+                                  />
+                                  <button
+                                    onClick={() =>
+                                      updateQuantity(book.id, book.quantity + 1)
+                                    }
+                                    className="p-2 text-gray-600 hover:text-indigo-600"
+                                  >
+                                    <FaPlus />
+                                  </button>
+                                </div>
                                 <button
                                   onClick={() => addToWishlist(book.id)}
                                   className="text-sm text-gray-700 hover:text-indigo-600 flex items-center"
@@ -368,21 +476,23 @@ const Checkout = () => {
                                   <FaTrashAlt className="mr-1" />
                                   Remove
                                 </button>
-                                <button
-                                  onClick={() => handleCheckout(book)}
-                                  disabled={isCheckingOut === book.id}
-                                  className={`text-sm px-3 py-1 rounded-md flex items-center ${
-                                    isCheckingOut === book.id
-                                      ? "bg-gray-400 text-white cursor-not-allowed"
-                                      : "bg-indigo-600 text-white hover:bg-indigo-700"
-                                  }`}
-                                >
-                                  <FaLock className="mr-1" />
-                                  {isCheckingOut === book.id
-                                    ? "Processing..."
-                                    : `Checkout ($${(book.price * book.quantity).toFixed(2)})`}
-                                </button>
                               </div>
+                              <button
+                                onClick={() => handleCheckout(book)}
+                                disabled={isCheckingOut === book.id}
+                                className={`text-sm px-3 py-1 rounded-md flex items-center ${
+                                  isCheckingOut === book.id
+                                    ? "bg-gray-400 text-white cursor-not-allowed"
+                                    : "bg-indigo-600 text-white hover:bg-indigo-700"
+                                }`}
+                              >
+                                <FaLock className="mr-1" />
+                                {isCheckingOut === book.id
+                                  ? "Processing..."
+                                  : `Checkout ($${(
+                                      book.price * book.quantity
+                                    ).toFixed(2)})`}
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -402,7 +512,9 @@ const Checkout = () => {
                     <div className="p-6">
                       <div className="border-b pb-4">
                         <div className="flex justify-between mb-2">
-                          <span className="text-gray-600">Subtotal</span>
+                          <span className sb="text-gray-600">
+                            Subtotal
+                          </span>
                           <span className="text-gray-800">
                             ${subtotalFormatted}
                           </span>
@@ -419,6 +531,23 @@ const Checkout = () => {
                           </span>
                         </div>
                       </div>
+
+                      <button
+                        onClick={handleCheckoutAll}
+                        disabled={
+                          isCheckingOut === "all" || cartBooks.length === 0
+                        }
+                        className={`w-full px-6 py-3 rounded-md text-base font-medium flex items-center justify-center ${
+                          isCheckingOut === "all" || cartBooks.length === 0
+                            ? "bg-gray-400 text-white cursor-not-allowed"
+                            : "bg-indigo-600 text-white hover:bg-indigo-700"
+                        }`}
+                      >
+                        <FaLock className="mr-2" />
+                        {isCheckingOut === "all"
+                          ? "Processing..."
+                          : `Checkout All ($${totalPrice})`}
+                      </button>
                     </div>
                   </div>
                 </div>
