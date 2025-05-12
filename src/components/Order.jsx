@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaShoppingCart, FaTrashAlt, FaStore, FaSadTear } from "react-icons/fa";
+import {
+  FaShoppingCart,
+  FaTrashAlt,
+  FaStore,
+  FaSadTear,
+  FaHistory,
+} from "react-icons/fa";
 
 const Order = () => {
   const [orderBooks, setOrderBooks] = useState([]);
+  const [orderHistory, setOrderHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [discountData, setDiscountData] = useState({
@@ -17,16 +24,18 @@ const Order = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       setIsLoading(true);
-      setError(null); // Clear previous errors
+      setError(null);
       try {
         const token = localStorage.getItem("token");
         if (!token) {
           setError("Please log in to view your order");
           setOrderBooks([]);
-          navigate("/login"); // Redirect to login
+          setOrderHistory([]);
+          navigate("/login");
           return;
         }
 
+        // Fetch current orders
         const response = await axios.get(
           "https://localhost:7189/api/Order/with-discount",
           {
@@ -37,7 +46,6 @@ const Order = () => {
           }
         );
 
-        // Validate response structure
         if (!response.data || !Array.isArray(response.data.orders)) {
           console.error("Expected an array in orders, got:", response.data);
           setError("Invalid order data received");
@@ -45,25 +53,46 @@ const Order = () => {
           return;
         }
 
-        // Set discount data
         setDiscountData({
           discountPercentage: response.data.discountPercentage || 0,
           totalOrders: response.data.totalOrders || 0,
           currentOrderBookCount: response.data.currentOrderBookCount || 0,
         });
 
-        // Map orders to state
+        // Filter out cancelled or purchased orders for the current order section
         setOrderBooks(
-          response.data.orders.map((book) => ({
-            id: book.id,
-            title: book.title,
-            author: book.author,
-            price: book.price,
-            imagePath: book.imagePath,
-            discountPercentage: book.discountPercentage || 0,
-            claimCode: book.claimCode,
-            dateAdded: book.dateAdded,
-          }))
+          response.data.orders
+            .filter((book) => !book.isCancelled && !book.isPurchased)
+            .map((book) => ({
+              id: book.id,
+              title: book.title,
+              author: book.author,
+              price: book.price,
+              imagePath: book.imagePath,
+              discountPercentage: book.discountPercentage || 0,
+              claimCode: book.claimCode,
+              dateAdded: book.dateAdded,
+              quantity: book.quantity || book.Quantity || 1, // Handle both camelCase and PascalCase
+            }))
+        );
+
+        // Set order history for cancelled or purchased orders
+        setOrderHistory(
+          response.data.orders
+            .filter((book) => book.isCancelled || book.isPurchased)
+            .map((book) => ({
+              id: book.id,
+              title: book.title,
+              author: book.author,
+              price: book.price,
+              imagePath: book.imagePath,
+              discountPercentage: book.discountPercentage || 0,
+              claimCode: book.claimCode,
+              dateAdded: book.dateAdded,
+              isCancelled: book.isCancelled,
+              isPurchased: book.isPurchased,
+              quantity: book.quantity || book.Quantity || 1, // Handle both camelCase and PascalCase
+            }))
         );
       } catch (error) {
         console.error("Error fetching order:", error);
@@ -75,12 +104,13 @@ const Order = () => {
           setError("Failed to load order. Please try again.");
         }
         setOrderBooks([]);
+        setOrderHistory([]);
       } finally {
         setIsLoading(false);
       }
     };
     fetchOrder();
-  }, []); // Removed navigate from dependencies
+  }, []);
 
   const removeFromOrder = async (bookId) => {
     if (
@@ -99,13 +129,26 @@ const Order = () => {
         return;
       }
 
-      await axios.delete(`https://localhost:7189/api/Order/remove/${bookId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "*/*",
-        },
-      });
+      // Use PATCH instead of DELETE
+      await axios.patch(
+        `https://localhost:7189/api/Order/cancel/${bookId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
+        }
+      );
+
+      // Update orderBooks and orderHistory
       setOrderBooks((prev) => prev.filter((book) => book.id !== bookId));
+      setOrderHistory((prev) => [
+        ...prev,
+        ...orderBooks
+          .filter((book) => book.id === bookId)
+          .map((book) => ({ ...book, isCancelled: true })),
+      ]);
     } catch (error) {
       console.error("Error removing from order:", error);
       if (error.response?.status === 401) {
@@ -114,74 +157,10 @@ const Order = () => {
         navigate("/login");
       } else if (error.response?.status === 404) {
         setError("Book not found in order.");
+      } else if (error.response?.status === 400) {
+        setError(error.response.data || "Order is already cancelled.");
       } else {
         setError("Failed to remove book from order.");
-      }
-    }
-  };
-
-  const addToOrder = async (bookId) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("Please log in to add items to your order");
-        navigate("/login");
-        return;
-      }
-
-      await axios.post(
-        "https://localhost:7189/api/Order/add",
-        { bookId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "*/*",
-          },
-        }
-      );
-
-      // Refetch order data to update discounts
-      const response = await axios.get(
-        "https://localhost:7189/api/Order/with-discount",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
-        }
-      );
-
-      setDiscountData({
-        discountPercentage: response.data.discountPercentage || 0,
-        totalOrders: response.data.totalOrders || 0,
-        currentOrderBookCount: response.data.currentOrderBookCount || 0,
-      });
-
-      setOrderBooks(
-        response.data.orders.map((book) => ({
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          price: book.price,
-          imagePath: book.imagePath,
-          discountPercentage: book.discountPercentage || 0,
-          claimCode: book.claimCode,
-          dateAdded: book.dateAdded,
-        }))
-      );
-
-      alert("Book added to order successfully!");
-    } catch (error) {
-      console.error("Error adding to order:", error);
-      if (error.response?.status === 401) {
-        setError("Session expired. Please log in again.");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else if (error.response?.status === 400) {
-        setError("Book already in order or invalid request.");
-      } else {
-        setError("Failed to add book to order. Please try again.");
       }
     }
   };
@@ -234,7 +213,10 @@ const Order = () => {
           </div>
         )}
 
-        {!isLoading && !error && orderBooks.length === 0 ? (
+        {!isLoading &&
+        !error &&
+        orderBooks.length === 0 &&
+        orderHistory.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
             <div className="flex flex-col items-center justify-center py-12">
               <FaSadTear size={64} className="text-gray-300 mb-4" />
@@ -273,81 +255,160 @@ const Order = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {orderBooks.map((book) => (
-                <div
-                  key={book.id}
-                  className="bg-white rounded-lg shadow-sm border overflow-hidden"
-                >
-                  <div className="relative h-48 overflow-hidden bg-gray-100">
-                    {book.imagePath ? (
-                      <img
-                        src={`https://localhost:7189${book.imagePath}`}
-                        alt={book.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full w-full bg-gray-200">
-                        <span className="text-gray-400">No image</span>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => removeFromOrder(book.id)}
-                      className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm hover:bg-red-50 transition-colors"
-                      title="Remove from order"
-                    >
-                      <FaTrashAlt className="text-red-500" size={16} />
-                    </button>
-                    {book.discountPercentage > 0 && (
-                      <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
-                        {book.discountPercentage * 100}% OFF
-                      </div>
-                    )}
-                  </div>
+            {orderBooks.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {orderBooks.map((book) => (
+                  <div
+                    key={book.id}
+                    className="bg-white rounded-lg shadow-sm border overflow-hidden"
+                  >
+                    <div className="relative h-48 overflow-hidden bg-gray-100">
+                      {book.imagePath ? (
+                        <img
+                          src={`https://localhost:7189${book.imagePath}`}
+                          alt={book.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full w-full bg-gray-200">
+                          <span className="text-gray-400">No image</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => removeFromOrder(book.id)}
+                        className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm hover:bg-red-50 transition-colors"
+                        title="Remove from order"
+                      >
+                        <FaTrashAlt className="text-red-500" size={16} />
+                      </button>
+                      {book.discountPercentage > 0 && (
+                        <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
+                          {book.discountPercentage * 100}% OFF
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="p-4">
-                    <Link to={`/book/${book.id}`} className="block">
-                      <h3 className="font-medium text-gray-900 mb-1 hover:text-indigo-600 transition-colors line-clamp-1">
-                        {book.title}
-                      </h3>
-                    </Link>
-                    <p className="text-sm text-gray-500 mb-1">
-                      by {book.author}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-1">
-                      Claim Code: {book.claimCode}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Ordered on:{" "}
-                      {new Date(book.dateAdded).toLocaleDateString()}
-                    </p>
+                    <div className="p-4">
+                      <Link to={`/book/${book.id}`} className="block">
+                        <h3 className="font-medium text-gray-900 mb-1 hover:text-indigo-600 transition-colors line-clamp-1">
+                          {book.title}
+                        </h3>
+                      </Link>
+                      <p className="text-sm text-gray-500 mb-1">
+                        by {book.author}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-1">
+                        Claim Code: {book.claimCode}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-1">
+                        Quantity: {book.quantity}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-3">
+                        Ordered on:{" "}
+                        {new Date(book.dateAdded).toLocaleDateString()}
+                      </p>
 
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-baseline">
-                        {book.discountPercentage > 0 ? (
-                          <>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-baseline">
+                          {book.discountPercentage > 0 ? (
+                            <>
+                              <span className="text-lg font-bold text-gray-900">
+                                $
+                                {(
+                                  book.price *
+                                  (1 - book.discountPercentage)
+                                ).toFixed(2)}
+                              </span>
+                              <span className="text-sm text-gray-500 line-through ml-2">
+                                ${book.price.toFixed(2)}
+                              </span>
+                            </>
+                          ) : (
                             <span className="text-lg font-bold text-gray-900">
-                              $
-                              {(
-                                book.price *
-                                (1 - book.discountPercentage)
-                              ).toFixed(2)}
-                            </span>
-                            <span className="text-sm text-gray-500 line-through ml-2">
                               ${book.price.toFixed(2)}
                             </span>
-                          </>
-                        ) : (
-                          <span className="text-lg font-bold text-gray-900">
-                            ${book.price.toFixed(2)}
-                          </span>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {/* Order History Section */}
+            {!isLoading && !error && orderHistory.length > 0 && (
+              <div className="mt-12">
+                <div className="flex items-center mb-6">
+                  <FaHistory className="text-indigo-600 mr-3" size={24} />
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Order History
+                  </h2>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {orderHistory.map((order) => (
+                    <div
+                      key={order.id}
+                      className="bg-white rounded-lg shadow-sm border overflow-hidden"
+                    >
+                      <div className="relative h-48 overflow-hidden bg-gray-100">
+                        {order.imagePath ? (
+                          <img
+                            src={`https://localhost:7189${order.imagePath}`}
+                            alt={order.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full w-full bg-gray-200">
+                            <span className="text-gray-400">No image</span>
+                          </div>
+                        )}
+                        {order.isCancelled && (
+                          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold py-1 px-2 rounded">
+                            Cancelled
+                          </div>
+                        )}
+                        {order.isPurchased && (
+                          <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
+                            Purchased
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-4">
+                        <Link to={`/book/${order.id}`} className="block">
+                          <h3 className="font-medium text-gray-900 mb-1 hover:text-indigo-600 transition-colors line-clamp-1">
+                            {order.title}
+                          </h3>
+                        </Link>
+                        <p className="text-sm text-gray-500 mb-1">
+                          by {order.author}
+                        </p>
+                        <p className="text-sm text-gray-500 mb-1">
+                          Claim Code: {order.claimCode}
+                        </p>
+                        <p className="text-sm text-gray-500 mb-1">
+                          Quantity: {order.quantity}
+                        </p>
+                        <p className="text-sm text-gray-500 mb-3">
+                          Ordered on:{" "}
+                          {new Date(order.dateAdded).toLocaleDateString()}
+                        </p>
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-lg font-bold text-gray-900">
+                            $
+                            {(
+                              order.price *
+                              (1 - order.discountPercentage)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
