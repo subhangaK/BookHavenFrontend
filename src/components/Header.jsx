@@ -132,7 +132,7 @@ const Header = () => {
                 to="/whishlist"
                 className="text-gray-600 hover:text-blue-600 transition duration-300"
               >
-                Whishlist
+                Wishlist
               </Link>
               <Link
                 to="/best-sellers"
