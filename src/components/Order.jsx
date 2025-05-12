@@ -15,7 +15,7 @@ const Order = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [discountData, setDiscountData] = useState({
-    discountPercentage: 0,
+    purchaseDiscountPercentage: 0,
     totalOrders: 0,
     currentOrderBookCount: 0,
   });
@@ -54,7 +54,7 @@ const Order = () => {
         }
 
         setDiscountData({
-          discountPercentage: response.data.discountPercentage || 0,
+          purchaseDiscountPercentage: response.data.purchaseDiscountPercentage || 0,
           totalOrders: response.data.totalOrders || 0,
           currentOrderBookCount: response.data.currentOrderBookCount || 0,
         });
@@ -72,7 +72,7 @@ const Order = () => {
               discountPercentage: book.discountPercentage || 0,
               claimCode: book.claimCode,
               dateAdded: book.dateAdded,
-              quantity: book.quantity || book.Quantity || 1, // Handle both camelCase and PascalCase
+              quantity: book.quantity || book.Quantity || 1,
             }))
         );
 
@@ -91,7 +91,7 @@ const Order = () => {
               dateAdded: book.dateAdded,
               isCancelled: book.isCancelled,
               isPurchased: book.isPurchased,
-              quantity: book.quantity || book.Quantity || 1, // Handle both camelCase and PascalCase
+              quantity: book.quantity || book.Quantity || 1,
             }))
         );
       } catch (error) {
@@ -110,7 +110,7 @@ const Order = () => {
       }
     };
     fetchOrder();
-  }, []);
+  }, [navigate]);
 
   const removeFromOrder = async (bookId) => {
     if (
@@ -164,6 +164,13 @@ const Order = () => {
       }
     }
   };
+
+  // Calculate total price for order history
+  const orderHistoryTotal = orderHistory.reduce(
+    (sum, order) => sum + order.price * order.quantity * (1 - order.discountPercentage),
+    0
+  );
+  const orderHistoryTotalFormatted = orderHistoryTotal.toFixed(2);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -283,13 +290,13 @@ const Order = () => {
                       </button>
                       {book.discountPercentage > 0 && (
                         <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
-                          {book.discountPercentage * 100}% OFF
+                          {(book.discountPercentage * 100).toFixed(0)}% OFF
                         </div>
                       )}
                     </div>
 
                     <div className="p-4">
-                      <Link to={`/book/${book.id}`} className="block">
+                      <Link to={`/books/${book.id}`} className="block">
                         <h3 className="font-medium text-gray-900 mb-1 hover:text-indigo-600 transition-colors line-clamp-1">
                           {book.title}
                         </h3>
@@ -316,16 +323,17 @@ const Order = () => {
                                 $
                                 {(
                                   book.price *
+                                  book.quantity *
                                   (1 - book.discountPercentage)
                                 ).toFixed(2)}
                               </span>
                               <span className="text-sm text-gray-500 line-through ml-2">
-                                ${book.price.toFixed(2)}
+                                ${(book.price * book.quantity).toFixed(2)}
                               </span>
                             </>
                           ) : (
                             <span className="text-lg font-bold text-gray-900">
-                              ${book.price.toFixed(2)}
+                              ${(book.price * book.quantity).toFixed(2)}
                             </span>
                           )}
                         </div>
@@ -339,11 +347,16 @@ const Order = () => {
             {/* Order History Section */}
             {!isLoading && !error && orderHistory.length > 0 && (
               <div className="mt-12">
-                <div className="flex items-center mb-6">
-                  <FaHistory className="text-indigo-600 mr-3" size={24} />
-                  <h2 className="text-2xl font-bold text-gray-800">
-                    Order History
-                  </h2>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center">
+                    <FaHistory className="text-indigo-600 mr-3" size={24} />
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      Order History
+                    </h2>
+                  </div>
+                  <div className="text-lg font-bold text-gray-800">
+                    Total: ${orderHistoryTotalFormatted}
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {orderHistory.map((order) => (
@@ -373,10 +386,15 @@ const Order = () => {
                             Purchased
                           </div>
                         )}
+                        {order.discountPercentage > 0 && (
+                          <div className="absolute top-2 left-2 mt-8 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
+                            {(order.discountPercentage * 100).toFixed(0)}% OFF
+                          </div>
+                        )}
                       </div>
 
                       <div className="p-4">
-                        <Link to={`/book/${order.id}`} className="block">
+                        <Link to={`/books/${order.id}`} className="block">
                           <h3 className="font-medium text-gray-900 mb-1 hover:text-indigo-600 transition-colors line-clamp-1">
                             {order.title}
                           </h3>
@@ -395,13 +413,27 @@ const Order = () => {
                           {new Date(order.dateAdded).toLocaleDateString()}
                         </p>
                         <div className="flex items-center justify-between mb-4">
-                          <span className="text-lg font-bold text-gray-900">
-                            $
-                            {(
-                              order.price *
-                              (1 - order.discountPercentage)
-                            ).toFixed(2)}
-                          </span>
+                          <div className="flex items-baseline">
+                            {order.discountPercentage > 0 ? (
+                              <>
+                                <span className="text-lg font-bold text-gray-900">
+                                  $
+                                  {(
+                                    order.price *
+                                    order.quantity *
+                                    (1 - order.discountPercentage)
+                                  ).toFixed(2)}
+                                </span>
+                                <span className="text-sm text-gray-500 line-through ml-2">
+                                  ${(order.price * order.quantity).toFixed(2)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-lg font-bold text-gray-900">
+                                ${(order.price * order.quantity).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

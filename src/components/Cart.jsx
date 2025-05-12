@@ -18,10 +18,16 @@ const Checkout = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(null);
   const [error, setError] = useState(null);
+  const [discountData, setDiscountData] = useState({
+    orders: [],
+    purchaseDiscountPercentage: 0,
+    totalOrders: 0,
+    currentOrderBookCount: 0,
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCart = async () => {
+    const fetchCartAndDiscounts = async () => {
       setIsLoading(true);
       setError(null);
       try {
@@ -32,45 +38,89 @@ const Checkout = () => {
           return;
         }
 
-        const response = await axios.get("https://localhost:7189/api/cart", {
+        // Fetch cart items
+        const cartResponse = await axios.get("https://localhost:7189/api/cart", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "*/*",
           },
         });
 
-        if (!Array.isArray(response.data)) {
-          console.error("Expected an array, got:", response.data);
+        if (!Array.isArray(cartResponse.data)) {
+          console.error("Expected an array, got:", cartResponse.data);
           setCartBooks([]);
           setError("Invalid cart data received");
           return;
         }
 
-        setCartBooks(
-          response.data.map((book) => ({
-            id: book.id,
-            title: book.title,
-            author: book.author,
-            price: book.price,
-            imagePath: book.imagePath,
-            quantity: book.quantity || 1,
-          }))
-        );
+        const fetchedCartBooks = cartResponse.data.map((book) => ({
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          price: book.price,
+          imagePath: book.imagePath,
+          quantity: book.quantity || 1,
+          discountPercentage: 0, // Will be updated after fetching discounts
+        }));
+
+        // Fetch discount information
+        const discountResponse = await axios.get("https://localhost:7189/api/Order/with-discount", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
+        });
+
+        if (!discountResponse.data || !Array.isArray(discountResponse.data.orders)) {
+          console.error("Expected an array in orders, got:", discountResponse.data);
+          setError("Invalid discount data received");
+          setCartBooks(fetchedCartBooks);
+          return;
+        }
+
+        setDiscountData({
+          orders: discountResponse.data.orders || [],
+          purchaseDiscountPercentage: discountResponse.data.purchaseDiscountPercentage || 0,
+          totalOrders: discountResponse.data.totalOrders || 0,
+          currentOrderBookCount: discountResponse.data.currentOrderBookCount || 0,
+        });
+
+        // Update cartBooks with discount percentages
+        const updatedCartBooks = fetchedCartBooks.map((book) => {
+          // Calculate quantity-based discount
+          let quantityDiscount = 0;
+          if (book.quantity >= 10) {
+            quantityDiscount = 0.10; // 10% for 10 or more books
+          } else if (book.quantity >= 5) {
+            quantityDiscount = 0.05; // 5% for 5 or more books
+          }
+
+          // Combine with the purchase-based discount (if applicable)
+          // Since this is a preview, we use the next purchase discount
+          const totalDiscount = quantityDiscount + (discountResponse.data.purchaseDiscountPercentage / 100);
+          
+          return {
+            ...book,
+            discountPercentage: totalDiscount,
+          };
+        });
+
+        setCartBooks(updatedCartBooks);
       } catch (error) {
-        console.error("Error fetching cart:", error);
+        console.error("Error fetching cart or discounts:", error);
         if (error.response?.status === 401) {
           setError("Session expired. Please log in again.");
           localStorage.removeItem("token");
           navigate("/login");
         } else {
-          setError("Failed to load cart. Please try again.");
+          setError("Failed to load cart or discounts. Please try again.");
         }
         setCartBooks([]);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchCart();
+    fetchCartAndDiscounts();
   }, [navigate]);
 
   const removeFromCart = async (bookId) => {
@@ -128,10 +178,25 @@ const Checkout = () => {
         }
       );
 
+      // Update the quantity and recalculate the discount
       setCartBooks((prev) =>
-        prev.map((book) =>
-          book.id === bookId ? { ...book, quantity: newQuantity } : book
-        )
+        prev.map((book) => {
+          if (book.id === bookId) {
+            let quantityDiscount = 0;
+            if (newQuantity >= 10) {
+              quantityDiscount = 0.10; // 10% for 10 or more books
+            } else if (newQuantity >= 5) {
+              quantityDiscount = 0.05; // 5% for 5 or more books
+            }
+            const totalDiscount = quantityDiscount + (discountData.purchaseDiscountPercentage / 100);
+            return {
+              ...book,
+              quantity: newQuantity,
+              discountPercentage: totalDiscount,
+            };
+          }
+          return book;
+        })
       );
     } catch (error) {
       console.error("Error updating quantity:", error);
@@ -200,7 +265,7 @@ const Checkout = () => {
     try {
       await axios.post(
         "https://localhost:7189/api/order/add",
-        { bookId: book.id, quantity: book.quantity }, // Include quantity
+        { bookId: book.id, quantity: book.quantity },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -286,8 +351,15 @@ const Checkout = () => {
     (sum, book) => sum + book.price * book.quantity,
     0
   );
-  const totalPrice = subtotal.toFixed(2);
+  const totalDiscountedPrice = cartBooks.reduce(
+    (sum, book) => sum + book.price * book.quantity * (1 - book.discountPercentage),
+    0
+  );
   const subtotalFormatted = subtotal.toFixed(2);
+  const totalPriceFormatted = totalDiscountedPrice.toFixed(2);
+  const totalDiscountPercentage = cartBooks.length > 0
+    ? ((subtotal - totalDiscountedPrice) / subtotal) * 100
+    : 0;
 
   return (
     <FavoritesProvider>
@@ -407,7 +479,7 @@ const Checkout = () => {
                             <div className="flex flex-col sm:flex-row justify-between">
                               <div>
                                 <Link
-                                  to={`/book/${book.id}`}
+                                  to={`/books/${book.id}`}
                                   className="font-medium text-gray-900 hover:text-indigo-600 transition-colors"
                                 >
                                   {book.title}
@@ -418,14 +490,35 @@ const Checkout = () => {
                                 <p className="text-sm text-green-600 mt-1">
                                   In Stock
                                 </p>
+                                {book.discountPercentage > 0 && (
+                                  <p className="text-sm text-green-600 mt-1">
+                                    Discount: {(book.discountPercentage * 100).toFixed(0)}% OFF
+                                  </p>
+                                )}
                               </div>
                               <div className="mt-4 sm:mt-0 text-right">
-                                <div className="font-bold text-gray-900">
-                                  ${(book.price * book.quantity).toFixed(2)}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  (${book.price.toFixed(2)} each)
-                                </div>
+                                {book.discountPercentage > 0 ? (
+                                  <>
+                                    <div className="font-bold text-gray-900">
+                                      ${(book.price * book.quantity * (1 - book.discountPercentage)).toFixed(2)}
+                                    </div>
+                                    <div className="text-sm text-gray-500 line-through">
+                                      ${(book.price * book.quantity).toFixed(2)}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      (${book.price.toFixed(2)} each)
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="font-bold text-gray-900">
+                                      ${(book.price * book.quantity).toFixed(2)}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      (${book.price.toFixed(2)} each)
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
 
@@ -490,7 +583,7 @@ const Checkout = () => {
                                 {isCheckingOut === book.id
                                   ? "Processing..."
                                   : `Checkout ($${(
-                                      book.price * book.quantity
+                                      book.price * book.quantity * (1 - book.discountPercentage)
                                     ).toFixed(2)})`}
                               </button>
                             </div>
@@ -512,13 +605,23 @@ const Checkout = () => {
                     <div className="p-6">
                       <div className="border-b pb-4">
                         <div className="flex justify-between mb-2">
-                          <span className sb="text-gray-600">
+                          <span className="text-gray-600">
                             Subtotal
                           </span>
                           <span className="text-gray-800">
                             ${subtotalFormatted}
                           </span>
                         </div>
+                        {totalDiscountPercentage > 0 && (
+                          <div className="flex justify-between mb-2">
+                            <span className="text-gray-600">
+                              Discount ({totalDiscountPercentage.toFixed(0)}%)
+                            </span>
+                            <span className="text-green-600">
+                              -${(subtotal - totalDiscountedPrice).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-4 mb-6">
@@ -527,7 +630,7 @@ const Checkout = () => {
                             Total
                           </span>
                           <span className="text-lg font-bold text-gray-800">
-                            ${totalPrice}
+                            ${totalPriceFormatted}
                           </span>
                         </div>
                       </div>
@@ -546,7 +649,7 @@ const Checkout = () => {
                         <FaLock className="mr-2" />
                         {isCheckingOut === "all"
                           ? "Processing..."
-                          : `Checkout All ($${totalPrice})`}
+                          : `Checkout All ($${totalPriceFormatted})`}
                       </button>
                     </div>
                   </div>
