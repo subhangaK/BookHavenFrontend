@@ -23,6 +23,7 @@ import AdminBook from "./components/AdminBook";
 import Order from "./components/Order";
 import ItemDetails from "./components/ItemDetail";
 import AdminOrderPage from "./components/AdminOrder";
+import AdminContact from "./components/AdminContact";
 import AdminBanner from "./components/AdminBanner";
 import { NotificationProvider } from "./context/NotificationContext"; // Make sure this path is correct
 
@@ -50,6 +51,9 @@ function Layout() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/adminbook" element={<AdminBook />} />
         <Route path="/adminorder" element={<AdminOrderPage />} />
+        <Route path="/order" element={<Order />} />
+        <Route path="/books/:id" element={<ItemDetails />} />
+        <Route path="/admincontact" element={<AdminContact />} />
         <Route path="/adminbanner" element={<AdminBanner />} />
         <Route path="/order" element={<Order/>} />
         <Route path="/books/:id" element={<ItemDetails/>} />

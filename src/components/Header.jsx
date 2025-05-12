@@ -92,10 +92,30 @@ const Header = () => {
           <div className="flex items-center space-x-12">
             <h1 className="text-2xl font-bold text-blue-600">BookHaven</h1>
             <nav className="hidden md:flex space-x-6">
-              <Link to="/" className="text-gray-800 hover:text-blue-600 font-medium transition duration-300">Home</Link>
-              <Link to="/ProductPage" className="text-gray-600 hover:text-blue-600 transition duration-300">Products</Link>
-              <Link to="/whishlist" className="text-gray-600 hover:text-blue-600 transition duration-300">Whishlist</Link>
-              <Link to="/best-sellers" className="text-gray-600 hover:text-blue-600 transition duration-300">Best Sellers</Link>
+              <Link
+                to="/"
+                className="text-gray-800 hover:text-blue-600 font-medium transition duration-300"
+              >
+                Home
+              </Link>
+              <Link
+                to="/ProductPage"
+                className="text-gray-600 hover:text-blue-600 transition duration-300"
+              >
+                Products
+              </Link>
+              <Link
+                to="/whishlist"
+                className="text-gray-600 hover:text-blue-600 transition duration-300"
+              >
+                Whishlist
+              </Link>
+              <Link
+                to="/best-sellers"
+                className="text-gray-600 hover:text-blue-600 transition duration-300"
+              >
+                Best Sellers
+              </Link>
             </nav>
           </div>
 

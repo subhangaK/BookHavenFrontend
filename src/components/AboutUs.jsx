@@ -1,123 +1,186 @@
 import React from "react";
-import aboutBg from "../assets/about-bg.jpg";
-import openBook from "../assets/open-book.jpg";
+import {
+  Book,
+  Bookmark,
+  Target,
+  Award,
+  Users,
+  BookOpen,
+  HeartHandshake,
+} from "lucide-react";
 
 const AboutUs = () => {
   return (
-    <div className="w-full font-sans overflow-x-hidden">
-      {/* Top Section with Background Image */}
-      <div
-        className="w-full h-[250px] bg-cover bg-center flex items-center justify-center"
-        style={{ backgroundImage: `url(${aboutBg})` }}
-      >
-        <h1 className="text-white text-4xl font-bold drop-shadow-md">
-          About Us
-        </h1>
-      </div>
+    <div className="bg-gray-50 text-gray-900 font-sans">
+      {/* Hero Section */}
+      <div className="relative bg-gradient-to-br from-indigo-600 via-blue-500 to-blue-600 text-white overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] opacity-10"></div>
+        <div className="container mx-auto px-4 py-16 text-center relative z-10">
+          <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500 rounded-full opacity-20 blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-500 rounded-full opacity-20 blur-3xl animate-pulse"></div>
 
-      {/* Welcome Section */}
-      <div className="py-10 w-full">
-        <h2 className="font-bold text-lg md:text-xl mb-4 text-center w-full">
-          Welcome to Book Haven – Your Ultimate Bookstore Destination
-        </h2>
-        <p className="text-gray-800 w-full text-center text-sm md:text-base px-2 md:px-0">
-          At Book Haven, we believe that every book tells a story, and every
-          reader <br /> deserves a sanctuary where they can explore new worlds,
-          spark their <br /> imagination, and discover timeless treasures. Our
-          online bookstore is a <br /> carefully curated space for book lovers
-          of all ages and interests.
-        </p>
-
-        {/* Centered Book Image */}
-        <div className="absolute flex justify-center my-10 w-full">
-          <img
-            src={openBook}
-            alt="Book"
-            className="w-[250px] h-auto shadow-lg border-gray-100 border-1"
-          />
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="bg-[#2c5c7c] text-white w-full text-sm md:text-base mt-20 border-black border-1">
-        <div className="flex justify-between flex-wrap max-w-6xl mx-auto px-4 py-6">
-          {/* Left Side */}
-          <div className="flex space-x-12">
-            <div className="-ml-16">
-              <p className="font-bold text-lg ">20+</p>
-              <p>Users</p>
-            </div>
-            <div className="ml-32">
-              <p className="font-bold text-lg">30+</p>
-              <p>Books sold</p>
-            </div>
-          </div>
-
-          {/* Right Side */}
-          <div className="flex space-x-8">
-            <div className="-ml-10">
-              <p className="font-bold text-lg">20+</p>
-              <p>Articles</p>
-            </div>
-            <div className="ml-24">
-              <p className="font-bold text-lg">20+</p>
-              <p>Books Published</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* What Sets Us Apart Section */}
-      <div className="flex flex-col md:flex-row items-center justify-center py-10 w-full gap-10 px-0">
-        {/* Left Box */}
-        <div className="relative w-[240px] h-[240px] mt-10">
-          {/* Back card (gray box on the left) */}
-          <div className="absolute top-6 left-2 w-[190px] h-[200px] bg-gray-200 shadow-md z-0"></div>
-
-          {/* Front card (blue box on the right) */}
-          <div className="absolute top-0 right-0 w-[192px] h-[192px] bg-[#183c5c] text-white p-4 flex items-center justify-center z-10 shadow-md">
-            <p
-              className="text-center font-semibold leading-6"
-              style={{
-                fontFamily: '"IM Fell English SC", serif',
-                fontSize: "1rem",
-              }}
+          <h1 className="text-xl md:text-4xl font-bold mb-4 leading-tight animate-fade-in-down">
+            BookHaven: Your Literary Sanctuary
+          </h1>
+          <p className="text-base max-w-2xl mx-auto mb-8 text-blue-100 animate-fade-in-up">
+            More than an online bookstore – we craft a curated literary
+            experience to spark your passion for reading and discovery.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <a
+              href="/productpage"
+              className="bg-white text-indigo-700 hover:bg-indigo-50 px-6 py-3 rounded-full font-medium text-base transition duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
-              A<br />
-              Haven Built
-              <br />
-              for Book
-              <br />
-              Lovers
-            </p>
+              Explore Our Collection
+            </a>
+            <a
+              href="/register"
+              className="border-2 border-white hover:bg-white/10 px-6 py-3 rounded-full font-medium text-base transition duration-300 transform hover:-translate-y-1"
+            >
+              Become a Member
+            </a>
           </div>
         </div>
+      </div>
 
-        {/* Right Content */}
-        <div className="text-left w-full max-w-2xl px-4 -mt-10">
-          <h3 className="font-bold mb-4">What Sets Book Haven Apart</h3>
-          <ul className="list-none space-y-3 text-sm md:text-base">
-            <li>
-              <span className="text-blue-800 mr-2">◆</span>
-              <strong>User-Friendly Experience:</strong> Clean, intuitive
-              website design
-            </li>
-            <li>
-              <span className="text-blue-800 mr-2">◆</span>
-              <strong>Detailed Book Information:</strong> In-depth descriptions
-              for every title
-            </li>
-            <li>
-              <span className="text-blue-800 mr-2">◆</span>
-              <strong>Handpicked Collection:</strong> Carefully selected
-              bestsellers and hidden gems
-            </li>
-            <li>
-              <span className="text-blue-800 mr-2">◆</span>
-              <strong>Read Anywhere, Anytime:</strong> A digital space that
-              feels like a cozy reading nook
-            </li>
-          </ul>
+      {/* Story Section */}
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="bg-white p-8 rounded-xl shadow-xl transform transition duration-500 hover:scale-105">
+            <BookOpen className="text-indigo-600 mb-6" size={40} />
+            <h2 className="text-2xl font-bold mb-6 text-indigo-800">
+              Our Story
+            </h2>
+            <p className="text-base text-gray-700 mb-6 leading-relaxed">
+              Founded by passionate bibliophiles, BookHaven was born from a
+              dream to create a digital sanctuary where book lovers can
+              discover, connect, and immerse themselves in literary worlds.
+              Every book is a journey, and every reader deserves an inspiring,
+              tailored experience.
+            </p>
+            <div className="flex items-center text-indigo-600">
+              <Target className="mr-3" size={24} />
+              <span className="font-semibold text-base">
+                Connecting Readers, One Book at a Time
+              </span>
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition duration-300 transform hover:-translate-y-2">
+              <div className="flex items-center mb-4">
+                <Bookmark className="text-indigo-600 mr-4" size={32} />
+                <h3 className="text-lg font-semibold text-indigo-900">
+                  Curated Selection
+                </h3>
+              </div>
+              <p className="text-base text-gray-600 leading-relaxed">
+                Our expert curators handpick each title, ensuring only the most
+                captivating, thought-provoking, and high-quality books grace our
+                virtual shelves.
+              </p>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition duration-300 transform hover:-translate-y-2">
+              <div className="flex items-center mb-4">
+                <HeartHandshake className="text-indigo-600 mr-4" size={32} />
+                <h3 className="text-lg font-semibold text-indigo-900">
+                  Vibrant Community
+                </h3>
+              </div>
+              <p className="text-base text-gray-600 leading-relaxed">
+                Beyond a bookstore, we’re a thriving community of readers,
+                writers, and book enthusiasts united by our love for the magic
+                of literature.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Impact and Achievements */}
+      <div className="bg-indigo-50 py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-2xl font-bold text-center mb-12 text-indigo-900 animate-fade-in">
+            Our Progress So Far
+          </h2>
+          <div className="grid md:grid-cols-4 gap-6">
+            {[
+              {
+                icon: (
+                  <Users className="text-indigo-700 mx-auto mb-4" size={40} />
+                ),
+                number: "10+",
+                label: "Active Members",
+                color: "text-indigo-900",
+              },
+              {
+                icon: (
+                  <Book className="text-indigo-700 mx-auto mb-4" size={40} />
+                ),
+                number: "20+",
+                label: "Books Published",
+                color: "text-indigo-900",
+              },
+              {
+                icon: (
+                  <Award className="text-indigo-700 mx-auto mb-4" size={40} />
+                ),
+                number: "3+",
+                label: "Genres Explored",
+                color: "text-indigo-900",
+              },
+              {
+                icon: (
+                  <Bookmark
+                    className="text-indigo-700 mx-auto mb-4"
+                    size={40}
+                  />
+                ),
+                number: "90%",
+                label: "Positive Feedback",
+                color: "text-indigo-900",
+              },
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className="bg-white p-6 rounded-xl text-center shadow-md hover:shadow-xl transition duration-300 transform hover:-translate-y-2"
+              >
+                {stat.icon}
+                <p className={`text-4xl font-bold mb-2 ${stat.color}`}>
+                  {stat.number}
+                </p>
+                <p className="text-sm text-gray-600">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Call to Action */}
+      <div className="bg-gradient-to-br from-indigo-600 via-blue-500 to-blue-600 text-white py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] opacity-10"></div>
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <h2 className="text-xl md:text-4xl font-bold mb-4 animate-fade-in-down">
+            Begin Your Literary Adventure
+          </h2>
+          <p className="text-base mb-8 max-w-2xl mx-auto text-blue-100 animate-fade-in-up">
+            Whether you’re chasing your next great read, a gift for a book
+            lover, or a portal to new worlds, BookHaven is your trusted guide in
+            the enchanting world of books.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <a
+              href="/productpage"
+              className="bg-white text-indigo-700 hover:bg-indigo-50 px-6 py-3 rounded-full font-medium text-base transition duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            >
+              Shop Now
+            </a>
+            <a
+              href="/register"
+              className="border-2 border-white hover:bg-white/10 px-6 py-3 rounded-full font-medium text-base transition duration-300 transform hover:-translate-y-1"
+            >
+              Join Us Now
+            </a>
+          </div>
         </div>
       </div>
     </div>
