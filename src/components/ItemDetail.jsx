@@ -44,31 +44,21 @@ export default function ItemDetails() {
     }
   };
 
-  // Fetch reviews with authentication handling
+  // Fetch reviews (now public, no authentication needed)
   const fetchReviews = async () => {
     try {
-      let headers = { Accept: "application/json" };
-      let currentToken = token;
-      
-      // First attempt
-      if (currentToken) {
-        headers.Authorization = `Bearer ${currentToken}`;
-      }
-
-      let response = await fetch(`${API_BASE_URL}api/Review/${id}`, { headers });
-      
-      // If unauthorized and we have a token, try refreshing
-      if (response.status === 401 && currentToken) {
-        currentToken = await refreshToken();
-        headers.Authorization = `Bearer ${currentToken}`;
-        response = await fetch(`${API_BASE_URL}api/Review/${id}`, { headers });
-      }
+      const response = await fetch(`${API_BASE_URL}api/Review/${id}`, {
+        headers: { Accept: "application/json" }
+      });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch reviews: ${response.status}`);
+        throw new Error(`Failed to fetch reviews: ${response.status} - ${response.statusText || 'Unknown error'}`);
       }
 
-      return await response.json();
+      const reviewsData = await response.json();
+      setReviews(reviewsData.reviews || []);
+      setReviewCount(reviewsData.reviewCount || 0);
+      setAverageRating(reviewsData.averageRating || 0);
     } catch (err) {
       console.error("Review fetch error:", err);
       throw err;
@@ -87,7 +77,7 @@ export default function ItemDetails() {
 
       // Fetch book details (public)
       const bookResponse = await fetch(`${API_BASE_URL}api/auth/books/${id}`);
-      if (!bookResponse.ok) throw new Error(`Book fetch failed: ${bookResponse.status}`);
+      if (!bookResponse.ok) throw new Error(`Book fetch failed: ${bookResponse.status} - ${bookResponse.statusText || 'Unknown error'}`);
       const bookData = await bookResponse.json();
       setBook({
         ...bookData,
@@ -98,7 +88,7 @@ export default function ItemDetails() {
 
       // Fetch related books (public)
       const booksResponse = await fetch(`${API_BASE_URL}api/auth/books`);
-      if (!booksResponse.ok) throw new Error(`Related books fetch failed: ${booksResponse.status}`);
+      if (!booksResponse.ok) throw new Error(`Related books fetch failed: ${booksResponse.status} - ${booksResponse.statusText || 'Unknown error'}`);
       const booksData = await booksResponse.json();
       setRelatedBooks(
         booksData
@@ -113,11 +103,8 @@ export default function ItemDetails() {
           }))
       );
 
-      // Fetch reviews (protected)
-      const reviewsData = await fetchReviews();
-      setReviews(reviewsData.reviews || []);
-      setReviewCount(reviewsData.reviewCount || 0);
-      setAverageRating(reviewsData.averageRating || 0);
+      // Fetch reviews (now public)
+      await fetchReviews();
 
       // Fetch user orders if authenticated (protected)
       if (token) {
@@ -136,7 +123,7 @@ export default function ItemDetails() {
             response = await fetch(`${API_BASE_URL}api/Order`, { headers });
           }
 
-          if (!response.ok) throw new Error(`Orders fetch failed: ${response.status}`);
+          if (!response.ok) throw new Error(`Orders fetch failed: ${response.status} - ${response.statusText || 'Unknown error'}`);
           
           const ordersData = await response.json();
           setUserOrders(ordersData || []);
@@ -205,10 +192,7 @@ export default function ItemDetails() {
       console.log("Review submitted:", response.data);
 
       // Refresh reviews after submission
-      const reviewsData = await fetchReviews();
-      setReviews(reviewsData.reviews || []);
-      setReviewCount(reviewsData.reviewCount || 0);
-      setAverageRating(reviewsData.averageRating || 0);
+      await fetchReviews();
 
       setShowReviewForm(false);
       setRating(0);
@@ -227,7 +211,7 @@ export default function ItemDetails() {
 
   const numericId = Number(id);
   const hasPurchased = userOrders.some(
-    order => order.id === numericId && (order.hasPurchased || order.isPurchased)
+    order => order.id === numericId && order.isPurchased
   );
 
   if (loading) return <div className="min-h-screen bg-white flex items-center justify-center">Loading...</div>;
