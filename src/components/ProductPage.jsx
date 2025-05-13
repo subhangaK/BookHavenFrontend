@@ -15,14 +15,12 @@ export default function ProductPage() {
   const [searchParams] = useSearchParams();
   const itemsPerPage = 8;
 
-  // Static categories (as per original code)
   const categories = [
     { name: "Fiction", count: 12 },
     { name: "Non-Fiction", count: 8 },
     { name: "Science", count: 5 },
   ];
 
-  // Fetch all books from the backend
   useEffect(() => {
     const fetchBooks = async () => {
       try {
@@ -31,17 +29,19 @@ export default function ProductPage() {
           throw new Error("Failed to fetch books");
         }
         const books = await response.json();
-        // Map backend book data to match ProductCard props
         const formattedBooks = books.map((book) => ({
           id: book.id.toString(),
           title: book.title,
           author: book.author,
           price: book.price,
           imagePath: book.imagePath,
-          category: book.category || assignRandomCategory(), // Assign random category if not provided
-          publicationYear: book.publicationYear || 2020, // Default if not provided
-          isbn: book.isbn || "", // Include isbn for search
+          category: book.category || assignRandomCategory(),
+          publicationYear: book.publicationYear || 2020,
+          isbn: book.isbn || "",
+          isOnSale: book.isOnSale || false, // Map to isOnSale (boolean)
+          discountPercentage: book.discountPercentage || 0, // Map to discountPercentage (number)
         }));
+
         setAllProducts(formattedBooks);
       } catch (error) {
         console.error("Error fetching books:", error);
@@ -52,7 +52,6 @@ export default function ProductPage() {
     fetchBooks();
   }, []);
 
-  // Reset page to 1 when search query or filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchParams, selectedCategories, selectedAuthors, sortOption, priceRange, yearRange]);
@@ -62,7 +61,6 @@ export default function ProductPage() {
     return categoryNames[Math.floor(Math.random() * categoryNames.length)];
   };
 
-  // Handle category filter changes
   const handleCategoryChange = (category) => {
     setSelectedCategories((prev) =>
       prev.includes(category)
@@ -71,7 +69,6 @@ export default function ProductPage() {
     );
   };
 
-  // Handle author filter changes
   const handleAuthorChange = (author) => {
     setSelectedAuthors((prev) =>
       prev.includes(author)
@@ -80,12 +77,10 @@ export default function ProductPage() {
     );
   };
 
-  // Handle sort option change
   const handleSortChange = (e) => {
     setSortOption(e.target.value);
   };
 
-  // Handle publication year range change
   const handleYearRangeChange = (field, value) => {
     setYearRange((prev) => ({
       ...prev,
@@ -93,24 +88,17 @@ export default function ProductPage() {
     }));
   };
 
-  // Get search query from URL
   const searchQuery = searchParams.get("search") || "";
 
-  // Filter and sort products
   const filteredProducts = allProducts
     .filter((book) => {
-      // Category filter
       const categoryMatch =
         selectedCategories.length === 0 || selectedCategories.includes(book.category);
-      // Price filter
       const priceMatch = book.price <= priceRange;
-      // Author filter
       const authorMatch =
         selectedAuthors.length === 0 || selectedAuthors.includes(book.author);
-      // Publication year filter
       const yearMatch =
         book.publicationYear >= yearRange.min && book.publicationYear <= yearRange.max;
-      // Search filter (whole word matching)
       let searchMatch = !searchQuery;
       if (searchQuery) {
         const queryWords = searchQuery.toLowerCase().split(/\s+/).filter(word => word);
@@ -128,36 +116,30 @@ export default function ProductPage() {
       if (sortOption === "Price: Low to High") {
         return a.price - b.price;
       } else if (sortOption === "Price: High to Low") {
-        return b.price - a.price;
+        return b.price - b.price;
       }
-      // Default: Featured (no sorting or use backend default)
       return 0;
     });
 
-  // Get unique authors for filter (dynamically from products)
   const uniqueAuthors = [...new Set(allProducts.map((book) => book.author))];
 
-  // Pagination calculations
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
-  // Handle page change
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
 
-  // Generate page numbers (show up to 5 pages for simplicity)
   const getPageNumbers = () => {
     const maxPagesToShow = 5;
     const pages = [];
     let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
-    // Adjust startPage if endPage is at the limit
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
@@ -172,7 +154,6 @@ export default function ProductPage() {
     <FavoritesProvider>
       <div className="min-h-screen bg-white">
         <div className="flex flex-col md:flex-row">
-          {/* Sidebar */}
           <div className="w-full md:w-64 p-6 border-r border-gray-200">
             <div className="mb-8">
               <h2 className="font-bold mb-4">Categories</h2>
@@ -204,7 +185,7 @@ export default function ProductPage() {
                   value={priceRange}
                   onChange={(e) => {
                     setPriceRange(Number(e.target.value));
-                    setCurrentPage(1); // Reset to page 1 on price change
+                    setCurrentPage(1);
                   }}
                   className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
                 />
@@ -283,9 +264,7 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="flex-1 p-6">
-            {/* All Products */}
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">
@@ -342,6 +321,8 @@ export default function ProductPage() {
                       author={book.author}
                       price={book.price}
                       imagePath={book.imagePath}
+                      isOnSale={book.isOnSale} // Pass isOnSale
+                      discountPercentage={book.discountPercentage} // Pass discountPercentage
                     />
                   ))
                 ) : (
@@ -353,7 +334,6 @@ export default function ProductPage() {
                 )}
               </div>
 
-              {/* Pagination */}
               {totalPages > 0 && (
                 <div className="flex justify-center">
                   <div className="flex space-x-2">

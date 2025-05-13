@@ -1,19 +1,23 @@
 import { useState, useContext, useEffect } from 'react';
-import { FaSearch, FaHeart, FaShoppingCart, FaUserCircle } from 'react-icons/fa';
+import { FaSearch, FaHeart, FaShoppingCart, FaUserCircle, FaBell } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext'; // ✅ FIXED HERE
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import NotificationBar from './NotificationBar';
 
 const Header = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(0); // Dynamic wishlist count
-  const [cartCount, setCartCount] = useState(0); // Dynamic cart count
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
   const { user, roles, logout } = useContext(AuthContext);
+  const { notifications, toggleNotificationBar } = useNotifications();
+  
   const navigate = useNavigate();
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  // Fetch wishlist and cart counts when user changes (login/logout)
   useEffect(() => {
     const fetchCounts = async () => {
       const token = localStorage.getItem("token");
@@ -23,49 +27,21 @@ const Header = () => {
         return;
       }
 
-      // Fetch wishlist
       try {
-        const wishlistResponse = await axios.get(
-          "https://localhost:7189/api/Wishlist",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "*/*",
-            },
-          }
-        );
-
-        if (Array.isArray(wishlistResponse.data)) {
-          setWishlistCount(wishlistResponse.data.length);
-        } else {
-          console.error("Expected an array for wishlist, got:", wishlistResponse.data);
-          setWishlistCount(0);
-        }
-      } catch (error) {
-        console.error("Error fetching wishlist count:", error);
+        const wishlistResponse = await axios.get("https://localhost:7189/api/Wishlist", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setWishlistCount(Array.isArray(wishlistResponse.data) ? wishlistResponse.data.length : 0);
+      } catch {
         setWishlistCount(0);
       }
 
-      // Fetch cart
       try {
-        const cartResponse = await axios.get(
-          "https://localhost:7189/api/cart",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "*/*",
-            },
-          }
-        );
-
-        if (Array.isArray(cartResponse.data)) {
-          setCartCount(cartResponse.data.length);
-        } else {
-          console.error("Expected an array for cart, got:", cartResponse.data);
-          setCartCount(0);
-        }
-      } catch (error) {
-        console.error("Error fetching cart count:", error);
+        const cartResponse = await axios.get("https://localhost:7189/api/cart", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCartCount(Array.isArray(cartResponse.data) ? cartResponse.data.length : 0);
+      } catch {
         setCartCount(0);
       }
     };
@@ -132,13 +108,7 @@ const Header = () => {
                 to="/whishlist"
                 className="text-gray-600 hover:text-blue-600 transition duration-300"
               >
-                Wishlist
-              </Link>
-              <Link
-                to="/best-sellers"
-                className="text-gray-600 hover:text-blue-600 transition duration-300"
-              >
-                Best Sellers
+                Whishlist
               </Link>
             </nav>
           </div>
@@ -167,6 +137,22 @@ const Header = () => {
 
               <div className="relative">
                 <button
+                  onClick={toggleNotificationBar}
+                  className="text-gray-600 hover:text-blue-600 transition duration-300"
+                  aria-label={`Notifications, ${unreadCount} unread`}
+                >
+                  <FaBell className="text-xl" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                <NotificationBar />
+              </div>
+
+              <div className="relative">
+                <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="text-gray-600 hover:text-blue-600 transition duration-300"
                 >
@@ -177,46 +163,17 @@ const Header = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50">
                     {user ? (
                       <>
-                        <Link
-                          to="/userprofile"
-                          className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          View Profile
-                        </Link>
+                        <Link to="/userprofile" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300" onClick={() => setDropdownOpen(false)}>View Profile</Link>
                         {roles.includes('SuperAdmin') && (
-                          <Link
-                            to="/AdminBook"
-                            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
-                            onClick={() => setDropdownOpen(false)}
-                          >
-                            Admin Dashboard
-                          </Link>
+                          <Link to="/AdminBook" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300" onClick={() => setDropdownOpen(false)}>Admin Dashboard</Link>
                         )}
                         {roles.includes('Staff') && (
-                          <Link
-                            to="/AdminOrder"
-                            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
-                            onClick={() => setDropdownOpen(false)}
-                          >
-                            View User Order
-                          </Link>
+                          <Link to="/AdminOrder" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300" onClick={() => setDropdownOpen(false)}>Admin Order</Link>
                         )}
-                        <button
-                          onClick={handleLogout}
-                          className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
-                        >
-                          Log Out
-                        </button>
+                        <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300">Log Out</button>
                       </>
                     ) : (
-                      <Link
-                        to="/Login"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
-                        onClick={() => setDropdownOpen(false)}
-                      >
-                        Log In
-                      </Link>
+                      <Link to="/Login" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300" onClick={() => setDropdownOpen(false)}>Log In</Link>
                     )}
                   </div>
                 )}

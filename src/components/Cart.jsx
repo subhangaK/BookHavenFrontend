@@ -11,6 +11,8 @@ import {
   FaPlus,
   FaMinus,
 } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ProductCard, { FavoritesProvider } from "./ProductCard";
 
 const Checkout = () => {
@@ -39,12 +41,15 @@ const Checkout = () => {
         }
 
         // Fetch cart items
-        const cartResponse = await axios.get("https://localhost:7189/api/cart", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
-        });
+        const cartResponse = await axios.get(
+          "https://localhost:7189/api/cart",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "*/*",
+            },
+          }
+        );
 
         if (!Array.isArray(cartResponse.data)) {
           console.error("Expected an array, got:", cartResponse.data);
@@ -60,19 +65,29 @@ const Checkout = () => {
           price: book.price,
           imagePath: book.imagePath,
           quantity: book.quantity || 1,
-          discountPercentage: 0, // Will be updated after fetching discounts
+          isOnSale: book.isOnSale || (book.discountPercentage > 0), // Derive isOnSale if not provided
+          discountPercentage: book.discountPercentage || 0, // Base discount from sale
         }));
 
         // Fetch discount information
-        const discountResponse = await axios.get("https://localhost:7189/api/Order/with-discount", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
-        });
+        const discountResponse = await axios.get(
+          "https://localhost:7189/api/Order/with-discount",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "*/*",
+            },
+          }
+        );
 
-        if (!discountResponse.data || !Array.isArray(discountResponse.data.orders)) {
-          console.error("Expected an array in orders, got:", discountResponse.data);
+        if (
+          !discountResponse.data ||
+          !Array.isArray(discountResponse.data.orders)
+        ) {
+          console.error(
+            "Expected an array in orders, got:",
+            discountResponse.data
+          );
           setError("Invalid discount data received");
           setCartBooks(fetchedCartBooks);
           return;
@@ -80,9 +95,11 @@ const Checkout = () => {
 
         setDiscountData({
           orders: discountResponse.data.orders || [],
-          purchaseDiscountPercentage: discountResponse.data.purchaseDiscountPercentage || 0,
+          purchaseDiscountPercentage:
+            discountResponse.data.purchaseDiscountPercentage || 0,
           totalOrders: discountResponse.data.totalOrders || 0,
-          currentOrderBookCount: discountResponse.data.currentOrderBookCount || 0,
+          currentOrderBookCount:
+            discountResponse.data.currentOrderBookCount || 0,
         });
 
         // Update cartBooks with discount percentages
@@ -90,15 +107,16 @@ const Checkout = () => {
           // Calculate quantity-based discount
           let quantityDiscount = 0;
           if (book.quantity >= 10) {
-            quantityDiscount = 0.10; // 10% for 10 or more books
+            quantityDiscount = 0.1; // 10% for 10 or more books
           } else if (book.quantity >= 5) {
             quantityDiscount = 0.05; // 5% for 5 or more books
           }
 
           // Combine with the purchase-based discount (if applicable)
-          // Since this is a preview, we use the next purchase discount
-          const totalDiscount = quantityDiscount + (discountResponse.data.purchaseDiscountPercentage / 100);
-          
+          const totalDiscount =
+            quantityDiscount +
+            discountResponse.data.purchaseDiscountPercentage / 100;
+
           return {
             ...book,
             discountPercentage: totalDiscount,
@@ -184,11 +202,12 @@ const Checkout = () => {
           if (book.id === bookId) {
             let quantityDiscount = 0;
             if (newQuantity >= 10) {
-              quantityDiscount = 0.10; // 10% for 10 or more books
+              quantityDiscount = 0.1; // 10% for 10 or more books
             } else if (newQuantity >= 5) {
               quantityDiscount = 0.05; // 5% for 5 or more books
             }
-            const totalDiscount = quantityDiscount + (discountData.purchaseDiscountPercentage / 100);
+            const totalDiscount =
+              quantityDiscount + discountData.purchaseDiscountPercentage / 100;
             return {
               ...book,
               quantity: newQuantity,
@@ -233,7 +252,7 @@ const Checkout = () => {
           },
         }
       );
-      alert("Book added to wishlist successfully!");
+      toast.success("Book added to wishlist successfully!");
     } catch (error) {
       console.error("Error adding to wishlist:", error);
       if (error.response?.status === 401) {
@@ -241,7 +260,7 @@ const Checkout = () => {
         localStorage.removeItem("token");
         navigate("/login");
       } else if (error.response?.status === 400) {
-        alert("Book already in wishlist.");
+        toast.error("Book already in wishlist.");
       } else {
         setError("Failed to add book to wishlist.");
       }
@@ -250,13 +269,13 @@ const Checkout = () => {
 
   const handleCheckout = async (book) => {
     if (!book) {
-      alert("No item selected for checkout.");
+      toast.error("No item selected for checkout.");
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please log in to place an order");
+      toast.error("Please log in to place an order");
       navigate("/login");
       return;
     }
@@ -274,28 +293,31 @@ const Checkout = () => {
           },
         }
       );
-      alert(
+      toast.success(
         `Book "${book.title}" added to order successfully! Bill and claim code sent to your email.`
       );
-      await removeFromCart(book.id);
-      navigate("/order");
+      // Delay removeFromCart and navigation to allow toast to display
+      setTimeout(async () => {
+        await removeFromCart(book.id);
+        navigate("/order");
+      }, 2000); // 1-second delay
     } catch (error) {
       console.error(
         "Error adding to order:",
         error.response ? error.response.data : error.message
       );
       if (error.response?.status === 404) {
-        alert(
+        toast.error(
           "Book not found or endpoint unavailable. Please ensure the book exists."
         );
       } else if (error.response?.status === 400) {
-        alert("Invalid request.");
+        toast.error("Invalid request.");
       } else if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        alert("Failed to add book to order. Please try again.");
+        toast.error("Failed to add book to order. Please try again.");
       }
     } finally {
       setIsCheckingOut(null);
@@ -305,7 +327,7 @@ const Checkout = () => {
   const handleCheckoutAll = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please log in to place an order");
+      toast.error("Please log in to place an order");
       navigate("/login");
       return;
     }
@@ -326,21 +348,24 @@ const Checkout = () => {
         );
         await removeFromCart(book.id);
       }
-      alert(
+      toast.success(
         "All items ordered successfully! Bill and claim code sent to your email."
       );
-      navigate("/order");
+      // Delay navigation to allow toast to display
+      setTimeout(() => {
+        navigate("/order");
+      }, 2000); // 1-second delay
     } catch (error) {
       console.error(
         "Error checking out all items:",
         error.response ? error.response.data : error.message
       );
       if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        alert("Failed to process order. Please try again.");
+        toast.error("Failed to process order. Please try again.");
       }
     } finally {
       setIsCheckingOut(null);
@@ -352,18 +377,28 @@ const Checkout = () => {
     0
   );
   const totalDiscountedPrice = cartBooks.reduce(
-    (sum, book) => sum + book.price * book.quantity * (1 - book.discountPercentage),
+    (sum, book) =>
+      sum + book.price * book.quantity * (1 - book.discountPercentage),
     0
   );
   const subtotalFormatted = subtotal.toFixed(2);
   const totalPriceFormatted = totalDiscountedPrice.toFixed(2);
-  const totalDiscountPercentage = cartBooks.length > 0
-    ? ((subtotal - totalDiscountedPrice) / subtotal) * 100
-    : 0;
+  const totalDiscountPercentage =
+    cartBooks.length > 0
+      ? ((subtotal - totalDiscountedPrice) / subtotal) * 100
+      : 0;
 
   return (
     <FavoritesProvider>
       <div className="bg-gray-50 min-h-screen">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          pauseOnHover
+        />
         <div className="bg-white border-b shadow-sm">
           <div className="container mx-auto px-4 py-3">
             <nav className="flex text-sm">
@@ -492,7 +527,9 @@ const Checkout = () => {
                                 </p>
                                 {book.discountPercentage > 0 && (
                                   <p className="text-sm text-green-600 mt-1">
-                                    Discount: {(book.discountPercentage * 100).toFixed(0)}% OFF
+                                    Discount:{" "}
+                                    {(book.discountPercentage * 100).toFixed(0)}
+                                    % OFF
                                   </p>
                                 )}
                               </div>
@@ -500,7 +537,12 @@ const Checkout = () => {
                                 {book.discountPercentage > 0 ? (
                                   <>
                                     <div className="font-bold text-gray-900">
-                                      ${(book.price * book.quantity * (1 - book.discountPercentage)).toFixed(2)}
+                                      $
+                                      {(
+                                        book.price *
+                                        book.quantity *
+                                        (1 - book.discountPercentage)
+                                      ).toFixed(2)}
                                     </div>
                                     <div className="text-sm text-gray-500 line-through">
                                       ${(book.price * book.quantity).toFixed(2)}
@@ -583,7 +625,9 @@ const Checkout = () => {
                                 {isCheckingOut === book.id
                                   ? "Processing..."
                                   : `Checkout ($${(
-                                      book.price * book.quantity * (1 - book.discountPercentage)
+                                      book.price *
+                                      book.quantity *
+                                      (1 - book.discountPercentage)
                                     ).toFixed(2)})`}
                               </button>
                             </div>
@@ -605,9 +649,7 @@ const Checkout = () => {
                     <div className="p-6">
                       <div className="border-b pb-4">
                         <div className="flex justify-between mb-2">
-                          <span className="text-gray-600">
-                            Subtotal
-                          </span>
+                          <span className="text-gray-600">Subtotal</span>
                           <span className="text-gray-800">
                             ${subtotalFormatted}
                           </span>

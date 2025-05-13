@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { FaHeart, FaShoppingCart, FaStar } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const FavoritesContext = createContext();
 
@@ -18,15 +20,12 @@ export const FavoritesProvider = ({ children }) => {
           return;
         }
 
-        const response = await axios.get(
-          "https://localhost:7189/api/Wishlist",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "*/*",
-            },
-          }
-        );
+        const response = await axios.get("https://localhost:7189/api/Wishlist", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
+        });
 
         if (!Array.isArray(response.data)) {
           console.error("Expected an array, got:", response.data);
@@ -59,12 +58,13 @@ export const FavoritesProvider = ({ children }) => {
 
   return (
     <FavoritesContext.Provider value={{ favorites, toggleFavorite }}>
+      <ToastContainer position="top-right" autoClose={3000} />
       {children}
     </FavoritesContext.Provider>
   );
 };
 
-const ProductCard = ({ id, title, author, price, imagePath }) => {
+const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPercentage }) => {
   const { favorites, toggleFavorite } = useContext(FavoritesContext);
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
@@ -73,7 +73,7 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
     e.stopPropagation();
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please log in to manage your wishlist");
+      toast.error("Please log in to manage your wishlist");
       navigate("/login");
       return;
     }
@@ -87,6 +87,7 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           },
         });
         toggleFavorite(id);
+        toast.success("Book removed from wishlist successfully!");
       } else {
         await axios.post(
           "https://localhost:7189/api/Wishlist/add",
@@ -100,19 +101,20 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           }
         );
         toggleFavorite(id);
+        toast.success("Book added to wishlist successfully!");
       }
     } catch (error) {
       console.error("Error updating wishlist:", error);
       if (error.response?.status === 404) {
-        alert("Book not found or not in wishlist.");
+        toast.error("Book not found or not in wishlist.");
       } else if (error.response?.status === 400) {
-        alert("Book already in wishlist or invalid request.");
+        toast.error("Book already in wishlist or invalid request.");
       } else if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        alert("Failed to update wishlist. Please try again.");
+        toast.error("Failed to update wishlist. Please try again.");
       }
     }
   };
@@ -121,38 +123,31 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
     e.stopPropagation();
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please log in to add items to your cart");
+      toast.error("Please log in to add items to your cart");
       navigate("/login");
       return;
     }
 
     try {
-      // Check if the book is in orders
-      const orderResponse = await axios.get(
-        "https://localhost:7189/api/Order",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
-        }
-      );
+      const orderResponse = await axios.get("https://localhost:7189/api/Order", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "*/*",
+        },
+      });
 
       if (!Array.isArray(orderResponse.data)) {
         console.error("Expected an array for orders, got:", orderResponse.data);
-        alert("Failed to verify order status. Please try again.");
+        toast.error("Failed to verify order status. Please try again.");
         return;
       }
 
       const isInOrder = orderResponse.data.some((order) => order.id === id);
       if (isInOrder) {
-        alert(
-          "This book is already in an order and cannot be added to the cart."
-        );
+        toast.error("This book is already in an order and cannot be added to the cart.");
         return;
       }
 
-      // Proceed to add to cart
       await axios.post(
         "https://localhost:7189/api/Cart/add",
         { bookId: id },
@@ -164,20 +159,20 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           },
         }
       );
-      alert("Book added to cart successfully!");
-      navigate("/cart");
+      toast.success("Book added to cart successfully!");
+      setTimeout(() => navigate("/cart"), 1000);
     } catch (error) {
       console.error("Error adding to cart:", error);
       if (error.response?.status === 404) {
-        alert("Book not found.");
+        toast.error("Book not found.");
       } else if (error.response?.status === 400) {
-        alert("Book already in cart or invalid request.");
+        toast.error("Book already in cart or invalid request.");
       } else if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        alert("Failed to add book to cart. Please try again.");
+        toast.error("Failed to add book to cart. Please try again.");
       }
     }
   };
@@ -186,14 +181,18 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
     navigate(`/books/${id}`);
   };
 
+  const discountedPrice = isOnSale
+    ? (price * (1 - discountPercentage / 100)).toFixed(2)
+    : null;
+
   return (
     <div
-      className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer transform hover:-translate-y-1"
+      className="relative bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer transform hover:-translate-y-1"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={navigateToDetails}
     >
-      {/* Wishlist Button - Absolutely positioned */}
+      {/* Wishlist Button */}
       <button
         onClick={handleToggleFavorite}
         className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm z-10 transition-all hover:scale-110"
@@ -204,6 +203,13 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           className={favorites.includes(id) ? "text-red-500" : "text-gray-300"}
         />
       </button>
+
+      {/* On Sale Badge */}
+      {isOnSale && (
+        <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+          On Sale
+        </div>
+      )}
 
       {/* Image Container */}
       <div className="relative w-full h-48 overflow-hidden bg-gray-100">
@@ -224,8 +230,8 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
 
       {/* Book Details */}
       <div className="p-4">
-        {/* Rating stars - For decorative purposes */}
-        <div className="flex text-yellow-400 mb-2">
+        {/* Rating stars */}
+        <div className="flex text-yellow-400 mb-2 items-center">
           <FaStar />
           <FaStar />
           <FaStar />
@@ -235,18 +241,21 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
         </div>
 
         {/* Book Title */}
-        <h3 className="font-semibold text-gray-800 mb-1 line-clamp-1">
-          {title}
-        </h3>
+        <h3 className="font-semibold text-gray-800 mb-1 line-clamp-1">{title}</h3>
 
         {/* Author */}
         <p className="text-sm text-gray-600 mb-3">by {author}</p>
 
         {/* Price and Actions */}
         <div className="flex items-center justify-between mt-2">
-          <div className="flex items-baseline">
-            <span className="text-lg font-bold text-gray-800">${price}</span>
-          </div>
+          {isOnSale ? (
+            <>
+              <span className="text-lg font-bold text-red-600">${discountedPrice}</span>
+              <span className="text-sm text-gray-500 line-through">${price.toFixed(2)}</span>
+            </>
+          ) : (
+            <span className="text-lg font-bold text-gray-800">${price.toFixed(2)}</span>
+          )}
         </div>
 
         {/* Add to Cart Button */}

@@ -8,6 +8,8 @@ import {
   FaStore,
   FaSadTear,
 } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ProductCard, { FavoritesProvider } from "./ProductCard";
 
 const Wishlist = () => {
@@ -70,42 +72,41 @@ const Wishlist = () => {
   }, []);
 
   const removeFromWishlist = async (bookId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to remove this book from your wishlist?"
-      )
-    ) {
-      return;
-    }
+    // Show a toast notification indicating the item will be removed
+    toast.info("Removing book from wishlist...", {
+      autoClose: 2000,
+      onClose: async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            setError("Please log in to manage your wishlist");
+            return;
+          }
 
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("Please log in to manage your wishlist");
-        return;
-      }
-
-      await axios.delete(
-        `https://localhost:7189/api/Wishlist/remove/${bookId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
+          await axios.delete(
+            `https://localhost:7189/api/Wishlist/remove/${bookId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "*/*",
+              },
+            }
+          );
+          setWishlistBooks((prev) => prev.filter((book) => book.id !== bookId));
+          toast.success("Book removed from wishlist successfully!");
+        } catch (error) {
+          console.error("Error removing from wishlist:", error);
+          if (error.response?.status === 401) {
+            setError("Session expired. Please log in again.");
+            localStorage.removeItem("token");
+          } else if (error.response?.status === 404) {
+            setError("Book not found in wishlist.");
+          } else {
+            setError("Failed to remove book from wishlist.");
+          }
         }
-      );
-      setWishlistBooks((prev) => prev.filter((book) => book.id !== bookId));
-    } catch (error) {
-      console.error("Error removing from wishlist:", error);
-      if (error.response?.status === 401) {
-        setError("Session expired. Please log in again.");
-        localStorage.removeItem("token");
-      } else if (error.response?.status === 404) {
-        setError("Book not found in wishlist.");
-      } else {
-        setError("Failed to remove book from wishlist.");
-      }
-    }
+      },
+    });
   };
 
   const addToCart = async (bookId) => {
@@ -117,7 +118,7 @@ const Wishlist = () => {
       }
 
       await axios.post(
-        "https://localhost:7189/api/Cart/add",
+       "https://localhost:7189/api/Cart/add",
         { bookId: bookId },
         {
           headers: {
@@ -127,7 +128,7 @@ const Wishlist = () => {
           },
         }
       );
-      alert("Book added to cart successfully!");
+      toast.success("Book added to cart successfully!");
     } catch (error) {
       console.error("Error adding to cart:", error);
       if (error.response?.status === 401) {
@@ -144,6 +145,7 @@ const Wishlist = () => {
   return (
     <FavoritesProvider>
       <div className="min-h-screen bg-gray-50">
+        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick pauseOnHover />
         <main className="container mx-auto py-8 px-4">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
