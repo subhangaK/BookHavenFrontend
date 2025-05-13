@@ -41,7 +41,6 @@ function Layout() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<ShoppingCart />} />
-        <Route path="/orderhistory" element={<OrderHistory />} />
         <Route path="/userprofile" element={<LibraryUserProfile />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/contact-us" element={<ContactUs />} />
