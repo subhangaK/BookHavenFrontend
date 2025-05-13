@@ -108,7 +108,7 @@ const Header = () => {
                 to="/whishlist"
                 className="text-gray-600 hover:text-blue-600 transition duration-300"
               >
-                Whishlist
+                Wishlist
               </Link>
             </nav>
           </div>
@@ -168,7 +168,7 @@ const Header = () => {
                           <Link to="/AdminBook" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300" onClick={() => setDropdownOpen(false)}>Admin Dashboard</Link>
                         )}
                         {roles.includes('Staff') && (
-                          <Link to="/AdminOrder" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300" onClick={() => setDropdownOpen(false)}>Admin Order</Link>
+                          <Link to="/AdminOrder" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300" onClick={() => setDropdownOpen(false)}>View All Order</Link>
                         )}
                         <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300">Log Out</button>
                       </>
