@@ -8,6 +8,8 @@ import {
   FaSadTear,
   FaHistory,
 } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Order = () => {
   const [orderBooks, setOrderBooks] = useState([]);
@@ -54,7 +56,8 @@ const Order = () => {
         }
 
         setDiscountData({
-          purchaseDiscountPercentage: response.data.purchaseDiscountPercentage || 0,
+          purchaseDiscountPercentage:
+            response.data.purchaseDiscountPercentage || 0,
           totalOrders: response.data.totalOrders || 0,
           currentOrderBookCount: response.data.currentOrderBookCount || 0,
         });
@@ -113,67 +116,75 @@ const Order = () => {
   }, [navigate]);
 
   const removeFromOrder = async (bookId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to remove this book from your order?"
-      )
-    ) {
-      return;
-    }
+    // Show a toast notification indicating the item will be removed
+    toast.info("Removing book from order...", {
+      autoClose: 2000,
+      onClose: async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            setError("Please log in to manage your order");
+            navigate("/login");
+            return;
+          }
 
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("Please log in to manage your order");
-        navigate("/login");
-        return;
-      }
+          // Use PATCH instead of DELETE
+          await axios.patch(
+            `https://localhost:7189/api/Order/cancel/${bookId}`,
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "*/*",
+              },
+            }
+          );
 
-      // Use PATCH instead of DELETE
-      await axios.patch(
-        `https://localhost:7189/api/Order/cancel/${bookId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
+          // Update orderBooks and orderHistory
+          setOrderBooks((prev) => prev.filter((book) => book.id !== bookId));
+          setOrderHistory((prev) => [
+            ...prev,
+            ...orderBooks
+              .filter((book) => book.id === bookId)
+              .map((book) => ({ ...book, isCancelled: true })),
+          ]);
+          toast.success("Book removed from order successfully!");
+        } catch (error) {
+          console.error("Error removing from order:", error);
+          if (error.response?.status === 401) {
+            setError("Session expired. Please log in again.");
+            localStorage.removeItem("token");
+            navigate("/login");
+          } else if (error.response?.status === 404) {
+            setError("Book not found in order.");
+          } else if (error.response?.status === 400) {
+            setError(error.response.data || "Order is already cancelled.");
+          } else {
+            setError("Failed to remove book from order.");
+          }
         }
-      );
-
-      // Update orderBooks and orderHistory
-      setOrderBooks((prev) => prev.filter((book) => book.id !== bookId));
-      setOrderHistory((prev) => [
-        ...prev,
-        ...orderBooks
-          .filter((book) => book.id === bookId)
-          .map((book) => ({ ...book, isCancelled: true })),
-      ]);
-    } catch (error) {
-      console.error("Error removing from order:", error);
-      if (error.response?.status === 401) {
-        setError("Session expired. Please log in again.");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else if (error.response?.status === 404) {
-        setError("Book not found in order.");
-      } else if (error.response?.status === 400) {
-        setError(error.response.data || "Order is already cancelled.");
-      } else {
-        setError("Failed to remove book from order.");
-      }
-    }
+      },
+    });
   };
 
   // Calculate total price for order history
   const orderHistoryTotal = orderHistory.reduce(
-    (sum, order) => sum + order.price * order.quantity * (1 - order.discountPercentage),
+    (sum, order) =>
+      sum + order.price * order.quantity * (1 - order.discountPercentage),
     0
   );
   const orderHistoryTotalFormatted = orderHistoryTotal.toFixed(2);
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnHover
+      />
       <main className="container mx-auto py-8 px-4">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center">
