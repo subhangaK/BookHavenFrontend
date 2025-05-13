@@ -314,12 +314,12 @@ export default function ItemDetails() {
         <div className="flex items-center text-sm text-gray-500 mb-8">
           <a href="/" className="hover:text-blue-500">Home</a>
           <span className="mx-2">/</span>
-          <a href="/books" className="hover:text-blue-500">Books</a>
+          <a href="/ProductPage" className="hover:text-blue-500">Books</a>
           <span className="mx-2">/</span>
           <span className="text-gray-800 font-medium">{book.title}</span>
         </div>
 
-        <a href="/books" className="inline-flex items-center text-blue-500 hover:text-blue-700 mb-6">
+        <a href="/ProductPage" className="inline-flex items-center text-blue-500 hover:text-blue-700 mb-6">
           <FaArrowLeft className="mr-2" /> Back to Books
         </a>
 
