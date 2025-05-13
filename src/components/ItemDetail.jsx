@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaBookOpen, FaShoppingCart, FaHeart, FaStar } from "react-icons/fa";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function ItemDetails() {
   const { id } = useParams();
@@ -40,11 +42,12 @@ export default function ItemDetails() {
     } catch (err) {
       localStorage.removeItem("token");
       navigate("/login");
+      toast.error("Session expired. Please log in again.");
       throw new Error("Session expired. Please log in again.");
     }
   };
 
-  // Fetch reviews (now public, no authentication needed)
+  // Fetch reviews (public, no authentication needed)
   const fetchReviews = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}api/Review/${id}`, {
@@ -83,7 +86,9 @@ export default function ItemDetails() {
         ...bookData,
         description: bookData.description || "No description available",
         longDescription: bookData.longDescription || "No additional details",
-        inStock: bookData.price > 0
+        inStock: bookData.price > 0,
+        isOnSale: bookData.isOnSale || false,
+        discountPercentage: bookData.discountPercentage || 0
       });
 
       // Fetch related books (public)
@@ -99,11 +104,13 @@ export default function ItemDetails() {
             title: b.title,
             author: b.author,
             price: b.price,
-            imagePath: b.imagePath
+            imagePath: b.imagePath,
+            isOnSale: b.isOnSale || false,
+            discountPercentage: b.discountPercentage || 0
           }))
       );
 
-      // Fetch reviews (now public)
+      // Fetch reviews (public)
       await fetchReviews();
 
       // Fetch user orders if authenticated (protected)
@@ -146,6 +153,78 @@ export default function ItemDetails() {
     }
   };
 
+  // Add to cart function
+  const handleAddToCart = async () => {
+    if (!token) {
+      toast.error("Please log in to add items to your cart");
+      navigate("/login");
+      return;
+    }
+
+    if (!book.inStock) {
+      toast.error("This book is out of stock.");
+      return;
+    }
+
+    try {
+      let currentToken = token;
+      let headers = {
+        Authorization: `Bearer ${currentToken}`,
+        "Content-Type": "application/json",
+        Accept: "*/*"
+      };
+
+      // Check if book is already in an order
+      const orderResponse = await axios.get(`${API_BASE_URL}api/Order`, { headers });
+
+      if (!Array.isArray(orderResponse.data)) {
+        console.error("Expected an array for orders, got:", orderResponse.data);
+        toast.error("Failed to verify order status. Please try again.");
+        return;
+      }
+
+      const isInOrder = orderResponse.data.some((order) => order.id === Number(id));
+      if (isInOrder) {
+        toast.error("This book is already in an order and cannot be added to the cart.");
+        return;
+      }
+
+      // Add to cart
+      const response = await axios.post(
+        `${API_BASE_URL}api/Cart/add`,
+        { bookId: Number(id), quantity },
+        { headers }
+      );
+
+      // If unauthorized, refresh token and retry
+      if (response.status === 401) {
+        currentToken = await refreshToken();
+        headers.Authorization = `Bearer ${currentToken}`;
+        await axios.post(
+          `${API_BASE_URL}api/Cart/add`,
+          { bookId: Number(id), quantity },
+          { headers }
+        );
+      }
+
+      toast.success("Book added to cart successfully!");
+      setTimeout(() => navigate("/cart"), 1000);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      if (error.response?.status === 404) {
+        toast.error("Book not found.");
+      } else if (error.response?.status === 400) {
+        toast.error("Book already in cart or invalid request.");
+      } else if (error.response?.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        toast.error("Failed to add book to cart. Please try again.");
+      }
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [id, retryCount]);
@@ -158,6 +237,7 @@ export default function ItemDetails() {
     e.preventDefault();
     if (!token) {
       navigate("/login");
+      toast.error("Please log in to submit a review.");
       return;
     }
 
@@ -197,11 +277,14 @@ export default function ItemDetails() {
       setShowReviewForm(false);
       setRating(0);
       setComment("");
+      toast.success("Review submitted successfully!");
     } catch (err) {
       if (err.response?.status === 401) {
         setSubmitError("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
       } else {
         setSubmitError(err.response?.data?.message || "Failed to submit review");
+        toast.error(err.response?.data?.message || "Failed to submit review");
       }
       console.error("Review submission error:", err);
     } finally {
@@ -214,12 +297,18 @@ export default function ItemDetails() {
     order => order.id === numericId && order.isPurchased
   );
 
+  // Calculate discounted price
+  const discountedPrice = book?.isOnSale && book?.discountPercentage > 0
+    ? (book.price * (1 - book.discountPercentage / 100)).toFixed(2)
+    : null;
+
   if (loading) return <div className="min-h-screen bg-white flex items-center justify-center">Loading...</div>;
   if (error) return <div className="min-h-screen bg-white flex items-center justify-center">Error: {error}</div>;
   if (!book) return <div className="min-h-screen bg-white flex items-center justify-center">Book not found</div>;
 
   return (
     <div className="min-h-screen bg-white">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Breadcrumb navigation */}
         <div className="flex items-center text-sm text-gray-500 mb-8">
@@ -237,7 +326,7 @@ export default function ItemDetails() {
         {/* Main content */}
         <div className="flex flex-col md:flex-row gap-8 mb-12">
           {/* Book image */}
-          <div className="md:w-1/3">
+          <div className="md:w-1/3 relative">
             <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center h-full">
               {book.imagePath ? (
                 <img 
@@ -261,6 +350,11 @@ export default function ItemDetails() {
                 </div>
               )}
             </div>
+            {book.isOnSale && (
+              <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+                Sale!
+              </div>
+            )}
           </div>
 
           {/* Book details */}
@@ -283,7 +377,15 @@ export default function ItemDetails() {
 
             {/* Price */}
             <div className="flex items-baseline mb-6">
-              <span className="text-3xl font-bold text-blue-600">${book.price}</span>
+              {book.isOnSale && discountedPrice ? (
+                <>
+                  <span className="text-3xl font-bold text-blue-600 mr-2">${discountedPrice}</span>
+                  <span className="text-lg text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                  <span className="text-sm text-blue-500 ml-2">({book.discountPercentage}% off)</span>
+                </>
+              ) : (
+                <span className="text-3xl font-bold text-blue-600">${book.price.toFixed(2)}</span>
+              )}
             </div>
 
             {/* Details grid */}
@@ -302,7 +404,11 @@ export default function ItemDetails() {
               </div>
               <div className="p-4 border border-gray-200 rounded-lg">
                 <div className="text-gray-500 text-sm">Price</div>
-                <div className="font-medium">${book.price}</div>
+                <div className="font-medium">
+                  {book.isOnSale && discountedPrice 
+                    ? `$${discountedPrice} (was $${book.price.toFixed(2)})` 
+                    : `$${book.price.toFixed(2)}`}
+                </div>
               </div>
             </div>
 
@@ -326,7 +432,11 @@ export default function ItemDetails() {
                 </button>
               </div>
 
-              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-md font-medium flex items-center justify-center gap-2 transition-colors">
+              <button 
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
+                onClick={handleAddToCart}
+                disabled={!book.inStock}
+              >
                 <FaShoppingCart /> Add to Cart
               </button>
 
@@ -405,7 +515,11 @@ export default function ItemDetails() {
                       </tr>
                       <tr className="border-b border-gray-200">
                         <td className="py-3 text-gray-500">Price</td>
-                        <td className="py-3 font-medium">${book.price}</td>
+                        <td className="py-3 font-medium">
+                          {book.isOnSale && discountedPrice 
+                            ? `$${discountedPrice} (was $${book.price.toFixed(2)})` 
+                            : `$${book.price.toFixed(2)}`}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -536,7 +650,12 @@ export default function ItemDetails() {
           <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {relatedBooks.map((relatedBook) => (
-              <div key={relatedBook.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+              <div key={relatedBook.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
+                {relatedBook.isOnSale && (
+                  <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+                    Sale!
+                  </div>
+                )}
                 <a href={`/books/${relatedBook.id}`} className="block">
                   <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
                     {relatedBook.imagePath ? (
@@ -564,7 +683,16 @@ export default function ItemDetails() {
                   <div className="p-4">
                     <h3 className="font-medium text-gray-900 mb-1 truncate">{relatedBook.title}</h3>
                     <p className="text-gray-600 text-sm mb-2">{relatedBook.author}</p>
-                    <div className="font-bold text-blue-600">${relatedBook.price}</div>
+                    <div className="font-bold text-blue-600">
+                      {relatedBook.isOnSale && relatedBook.discountPercentage > 0 ? (
+                        <>
+                          <span>${(relatedBook.price * (1 - relatedBook.discountPercentage / 100)).toFixed(2)}</span>
+                          <span className="text-sm text-gray-500 line-through ml-2">${relatedBook.price.toFixed(2)}</span>
+                        </>
+                      ) : (
+                        <span>${relatedBook.price.toFixed(2)}</span>
+                      )}
+                    </div>
                   </div>
                 </a>
               </div>
