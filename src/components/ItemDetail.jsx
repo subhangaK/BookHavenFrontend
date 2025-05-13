@@ -155,75 +155,60 @@ export default function ItemDetails() {
 
   // Add to cart function
   const handleAddToCart = async () => {
-    if (!token) {
-      toast.error("Please log in to add items to your cart");
-      navigate("/login");
-      return;
-    }
+  if (!token) {
+    toast.error("Please log in to add items to your cart");
+    navigate("/login");
+    return;
+  }
 
-    if (!book.inStock) {
-      toast.error("This book is out of stock.");
-      return;
-    }
+  if (!book.inStock) {
+    toast.error("This book is out of stock.");
+    return;
+  }
 
-    try {
-      let currentToken = token;
-      let headers = {
-        Authorization: `Bearer ${currentToken}`,
-        "Content-Type": "application/json",
-        Accept: "*/*"
-      };
+  try {
+    let currentToken = token;
+    let headers = {
+      Authorization: `Bearer ${currentToken}`,
+      "Content-Type": "application/json",
+      Accept: "*/*"
+    };
 
-      // Check if book is already in an order
-      const orderResponse = await axios.get(`${API_BASE_URL}api/Order`, { headers });
+    // Add to cart directly
+    const response = await axios.post(
+      `${API_BASE_URL}api/Cart/add`,
+      { bookId: Number(id), quantity },
+      { headers }
+    );
 
-      if (!Array.isArray(orderResponse.data)) {
-        console.error("Expected an array for orders, got:", orderResponse.data);
-        toast.error("Failed to verify order status. Please try again.");
-        return;
-      }
-
-      const isInOrder = orderResponse.data.some((order) => order.id === Number(id));
-      if (isInOrder) {
-        toast.error("This book is already in an order and cannot be added to the cart.");
-        return;
-      }
-
-      // Add to cart
-      const response = await axios.post(
+    // Handle unauthorized (refresh token and retry)
+    if (response.status === 401) {
+      currentToken = await refreshToken();
+      headers.Authorization = `Bearer ${currentToken}`;
+      await axios.post(
         `${API_BASE_URL}api/Cart/add`,
         { bookId: Number(id), quantity },
         { headers }
       );
-
-      // If unauthorized, refresh token and retry
-      if (response.status === 401) {
-        currentToken = await refreshToken();
-        headers.Authorization = `Bearer ${currentToken}`;
-        await axios.post(
-          `${API_BASE_URL}api/Cart/add`,
-          { bookId: Number(id), quantity },
-          { headers }
-        );
-      }
-
-      toast.success("Book added to cart successfully!");
-      setTimeout(() => navigate("/cart"), 1000);
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      if (error.response?.status === 404) {
-        toast.error("Book not found.");
-      } else if (error.response?.status === 400) {
-        toast.error("Book already in cart or invalid request.");
-      } else if (error.response?.status === 401) {
-        toast.error("Session expired. Please log in again.");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else {
-        toast.error("Failed to add book to cart. Please try again.");
-      }
     }
-  };
+
+    toast.success("Book added to cart successfully!");
+    setTimeout(() => navigate("/cart"), 1000);
+  } catch (error) {
+    console.error("Error adding to cart:", error);
+    if (error.response?.status === 404) {
+      toast.error("Book not found.");
+    } else if (error.response?.status === 400) {
+      toast.error("Book already in cart or invalid request.");
+    } else if (error.response?.status === 401) {
+      toast.error("Session expired. Please log in again.");
+      localStorage.removeItem("token");
+      navigate("/login");
+    } else {
+      toast.error("Failed to add book to cart. Please try again.");
+    }
+  }
+};
 
   useEffect(() => {
     fetchData();
