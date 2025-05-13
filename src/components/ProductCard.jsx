@@ -15,7 +15,10 @@ export const FavoritesProvider = ({ children }) => {
     const fetchFavorites = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) return setFavorites([]);
+        if (!token) {
+          setFavorites([]);
+          return;
+        }
 
         const response = await axios.get("https://localhost:7189/api/Wishlist", {
           headers: {
@@ -24,18 +27,21 @@ export const FavoritesProvider = ({ children }) => {
           },
         });
 
-        if (Array.isArray(response.data)) {
-          const wishlistIds = response.data.map((book) => book.id);
-          setFavorites(wishlistIds);
-        } else {
-          console.error("Unexpected response format:", response.data);
+        if (!Array.isArray(response.data)) {
+          console.error("Expected an array, got:", response.data);
+          setFavorites([]);
+          return;
         }
+
+        const wishlistIds = response.data.map((book) => book.id);
+        setFavorites(wishlistIds);
       } catch (error) {
         console.error("Error fetching favorites:", error);
         if (error.response?.status === 401) {
           localStorage.removeItem("token");
           navigate("/login");
         }
+        setFavorites([]);
       }
     };
 
@@ -52,6 +58,7 @@ export const FavoritesProvider = ({ children }) => {
 
   return (
     <FavoritesContext.Provider value={{ favorites, toggleFavorite }}>
+      <ToastContainer position="top-right" autoClose={3000} />
       {children}
     </FavoritesContext.Provider>
   );
@@ -74,7 +81,10 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
     try {
       if (favorites.includes(id)) {
         await axios.delete(`https://localhost:7189/api/Wishlist/remove/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "*/*",
+          },
         });
         toggleFavorite(id);
         toast.success("Book removed from wishlist successfully!");
@@ -86,13 +96,13 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
+              Accept: "*/*",
             },
           }
         );
         toggleFavorite(id);
         toast.success("Book added to wishlist successfully!");
       }
-      toggleFavorite(id);
     } catch (error) {
       console.error("Error updating wishlist:", error);
       if (error.response?.status === 404) {
@@ -105,13 +115,6 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
         navigate("/login");
       } else {
         toast.error("Failed to update wishlist. Please try again.");
-      console.error("Wishlist update error:", error);
-      if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else {
-        alert("Could not update wishlist.");
       }
     }
   };
@@ -127,12 +130,22 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
 
     try {
       const orderResponse = await axios.get("https://localhost:7189/api/Order", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "*/*",
+        },
       });
 
-      const isInOrder = Array.isArray(orderResponse.data) && orderResponse.data.some(order => order.id === id);
+      if (!Array.isArray(orderResponse.data)) {
+        console.error("Expected an array for orders, got:", orderResponse.data);
+        toast.error("Failed to verify order status. Please try again.");
+        return;
+      }
+
+      const isInOrder = orderResponse.data.some((order) => order.id === id);
       if (isInOrder) {
-        return alert("Book already in an order.");
+        toast.error("This book is already in an order and cannot be added to the cart.");
+        return;
       }
 
       await axios.post(
@@ -142,11 +155,12 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
+            Accept: "*/*",
           },
         }
       );
       toast.success("Book added to cart successfully!");
-      navigate("/cart");
+      setTimeout(() => navigate("/cart"), 1000);
     } catch (error) {
       console.error("Error adding to cart:", error);
       if (error.response?.status === 404) {
@@ -156,12 +170,15 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
       } else if (error.response?.status === 401) {
         toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
-        alert("Session expired. Please log in again.");
         navigate("/login");
       } else {
         toast.error("Failed to add book to cart. Please try again.");
       }
     }
+  };
+
+  const navigateToDetails = () => {
+    navigate(`/books/${id}`);
   };
 
   const discountedPrice = isOnSale
@@ -173,22 +190,18 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
       className="relative bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer transform hover:-translate-y-1"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => navigate(`/books/${id}`)}
+      onClick={navigateToDetails}
     >
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        pauseOnHover
-      />
+      {/* Wishlist Button */}
       <button
         onClick={handleToggleFavorite}
-        className="absolute top-2 right-2 bg-white rounded-full p-2 shadow z-10 hover:scale-110 transition"
+        className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm z-10 transition-all hover:scale-110"
         aria-label="Add to wishlist"
       >
-        <FaHeart className={favorites.includes(id) ? "text-red-500" : "text-gray-300"} size={20} />
+        <FaHeart
+          size={20}
+          className={favorites.includes(id) ? "text-red-500" : "text-gray-300"}
+        />
       </button>
 
       {/* On Sale Badge */}
@@ -198,8 +211,8 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
         </div>
       )}
 
-      {/* Image */}
-      <div className="w-full h-48 bg-gray-100 overflow-hidden">
+      {/* Image Container */}
+      <div className="relative w-full h-48 overflow-hidden bg-gray-100">
         {imagePath ? (
           <img
             src={`https://localhost:7189${imagePath}`}
@@ -209,26 +222,31 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-            No image
+          <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+            <span className="text-gray-500">No image available</span>
           </div>
         )}
       </div>
 
-      {/* Info */}
+      {/* Book Details */}
       <div className="p-4">
-        {/* Rating Placeholder */}
+        {/* Rating stars */}
         <div className="flex text-yellow-400 mb-2 items-center">
-          {[...Array(4)].map((_, i) => (
-            <FaStar key={i} />
-          ))}
+          <FaStar />
+          <FaStar />
+          <FaStar />
+          <FaStar />
           <FaStar className="text-gray-300" />
           <span className="ml-1 text-xs text-gray-600">(4.0)</span>
         </div>
 
+        {/* Book Title */}
         <h3 className="font-semibold text-gray-800 mb-1 line-clamp-1">{title}</h3>
-        <p className="text-sm text-gray-600 mb-2">by {author}</p>
 
+        {/* Author */}
+        <p className="text-sm text-gray-600 mb-3">by {author}</p>
+
+        {/* Price and Actions */}
         <div className="flex items-center justify-between mt-2">
           {isOnSale ? (
             <>
@@ -240,6 +258,7 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
           )}
         </div>
 
+        {/* Add to Cart Button */}
         <button
           onClick={handleAddToCart}
           className="mt-3 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300 flex items-center justify-center"

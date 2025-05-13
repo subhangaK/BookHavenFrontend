@@ -65,7 +65,8 @@ const Checkout = () => {
           price: book.price,
           imagePath: book.imagePath,
           quantity: book.quantity || 1,
-          discountPercentage: 0, // Will be updated after fetching discounts
+          isOnSale: book.isOnSale || (book.discountPercentage > 0), // Derive isOnSale if not provided
+          discountPercentage: book.discountPercentage || 0, // Base discount from sale
         }));
 
         // Fetch discount information
@@ -112,7 +113,6 @@ const Checkout = () => {
           }
 
           // Combine with the purchase-based discount (if applicable)
-          // Since this is a preview, we use the next purchase discount
           const totalDiscount =
             quantityDiscount +
             discountResponse.data.purchaseDiscountPercentage / 100;
@@ -296,8 +296,11 @@ const Checkout = () => {
       toast.success(
         `Book "${book.title}" added to order successfully! Bill and claim code sent to your email.`
       );
-      await removeFromCart(book.id);
-      navigate("/order");
+      // Delay removeFromCart and navigation to allow toast to display
+      setTimeout(async () => {
+        await removeFromCart(book.id);
+        navigate("/order");
+      }, 2000); // 1-second delay
     } catch (error) {
       console.error(
         "Error adding to order:",
@@ -348,7 +351,10 @@ const Checkout = () => {
       toast.success(
         "All items ordered successfully! Bill and claim code sent to your email."
       );
-      navigate("/order");
+      // Delay navigation to allow toast to display
+      setTimeout(() => {
+        navigate("/order");
+      }, 2000); // 1-second delay
     } catch (error) {
       console.error(
         "Error checking out all items:",

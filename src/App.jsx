@@ -5,7 +5,6 @@ import {
   useLocation,
 } from "react-router-dom";
 import ShoppingCart from "./components/Cart";
-import OrderHistory from "./components/OrderHistory";
 import ProductPage from "./components/ProductPage";
 import Whishlist from "./components/Whishlist";
 import LibraryUserProfile from "./components/UserProfile";
