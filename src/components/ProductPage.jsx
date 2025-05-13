@@ -2,11 +2,15 @@ import { useState, useEffect } from "react";
 import { FaSearch, FaShoppingCart, FaUser, FaPhone } from "react-icons/fa";
 import ProductCard, { FavoritesProvider } from "./ProductCard";
 import { useSearchParams } from "react-router-dom";
+import { ToastContainer } from "react-toastify"; // Added import
+import "react-toastify/dist/ReactToastify.css"; // Ensure CSS is imported
 
 export default function ProductPage() {
-  const [priceRange, setPriceRange] = useState(100);
+  const [priceRange, setPriceRange] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(100);
   const [view, setView] = useState("grid");
   const [allProducts, setAllProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedAuthors, setSelectedAuthors] = useState([]);
   const [sortOption, setSortOption] = useState("Featured");
@@ -15,11 +19,13 @@ export default function ProductPage() {
   const [searchParams] = useSearchParams();
   const itemsPerPage = 8;
 
-  const categories = [
-    { name: "Fiction", count: 12 },
-    { name: "Non-Fiction", count: 8 },
-    { name: "Science", count: 5 },
-  ];
+  // Initialize selectedCategories from query parameter
+  useEffect(() => {
+    const category = searchParams.get("category");
+    if (category) {
+      setSelectedCategories([decodeURIComponent(category)]);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -29,23 +35,74 @@ export default function ProductPage() {
           throw new Error("Failed to fetch books");
         }
         const books = await response.json();
-        const formattedBooks = books.map((book) => ({
-          id: book.id.toString(),
-          title: book.title,
-          author: book.author,
-          price: book.price,
-          imagePath: book.imagePath,
-          category: book.category || assignRandomCategory(),
-          publicationYear: book.publicationYear || 2020,
-          isbn: book.isbn || "",
-          isOnSale: book.isOnSale || false, // Map to isOnSale (boolean)
-          discountPercentage: book.discountPercentage || 0, // Map to discountPercentage (number)
-        }));
+        const formattedBooks = await Promise.all(
+          books.map(async (book) => {
+            // Fetch review data for each book
+            let averageRating = 0;
+            let reviewCount = 0;
+            try {
+              const reviewResponse = await fetch(`https://localhost:7189/api/Review/${book.id}`, {
+                headers: { Accept: "application/json" }
+              });
+              if (reviewResponse.ok) {
+                const reviewData = await reviewResponse.json();
+                averageRating = reviewData.averageRating || 0;
+                reviewCount = reviewData.reviewCount || 0;
+              }
+            } catch (err) {
+              console.error(`Error fetching reviews for book ${book.id}:`, err);
+            }
+
+            // Calculate discounted price
+            const discountedPrice = book.isOnSale && book.discountPercentage > 0
+              ? book.price * (1 - book.discountPercentage / 100)
+              : null;
+
+            return {
+              id: book.id.toString(),
+              title: book.title,
+              author: book.author,
+              price: book.price,
+              imagePath: book.imagePath,
+              category: book.category || assignRandomCategory(),
+              publicationYear: book.publicationYear || 2020,
+              isbn: book.isbn || "",
+              isOnSale: book.isOnSale || false,
+              discountPercentage: book.discountPercentage || 0,
+              averageRating,
+              reviewCount,
+              discountedPrice
+            };
+          })
+        );
 
         setAllProducts(formattedBooks);
+
+        // Calculate dynamic categories
+        const categoryCounts = formattedBooks.reduce((acc, book) => {
+          const category = book.category || "Uncategorized";
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        }, {});
+        const dynamicCategories = Object.entries(categoryCounts).map(([name, count]) => ({
+          name,
+          count,
+        }));
+        setCategories(dynamicCategories);
+
+        // Calculate the maximum price (considering discounted prices)
+        const highestPrice = Math.max(
+          ...formattedBooks.map((book) => book.discountedPrice || book.price),
+          100
+        );
+        setMaxPrice(highestPrice);
+        setPriceRange(highestPrice);
       } catch (error) {
         console.error("Error fetching books:", error);
         setAllProducts([]);
+        setCategories([{ name: "Uncategorized", count: 0 }]);
+        setMaxPrice(100);
+        setPriceRange(100);
       }
     };
 
@@ -58,7 +115,9 @@ export default function ProductPage() {
 
   const assignRandomCategory = () => {
     const categoryNames = categories.map((c) => c.name);
-    return categoryNames[Math.floor(Math.random() * categoryNames.length)];
+    return categoryNames.length > 0
+      ? categoryNames[Math.floor(Math.random() * categoryNames.length)]
+      : "Uncategorized";
   };
 
   const handleCategoryChange = (category) => {
@@ -94,29 +153,31 @@ export default function ProductPage() {
     .filter((book) => {
       const categoryMatch =
         selectedCategories.length === 0 || selectedCategories.includes(book.category);
-      const priceMatch = book.price <= priceRange;
+      const priceMatch = (book.discountedPrice || book.price) <= priceRange;
       const authorMatch =
         selectedAuthors.length === 0 || selectedAuthors.includes(book.author);
       const yearMatch =
         book.publicationYear >= yearRange.min && book.publicationYear <= yearRange.max;
       let searchMatch = !searchQuery;
       if (searchQuery) {
-        const queryWords = searchQuery.toLowerCase().split(/\s+/).filter(word => word);
+        const queryWords = searchQuery.toLowerCase().split(/\s+/).filter((word) => word);
         const titleWords = book.title.toLowerCase();
         const authorWords = book.author.toLowerCase();
         const isbnWords = book.isbn.toLowerCase();
         searchMatch = queryWords.every((queryWord) => {
-          const regex = new RegExp(`\\b${queryWord}\\b`, 'i');
+          const regex = new RegExp(`\\b${queryWord}\\b`, "i");
           return regex.test(titleWords) || regex.test(authorWords) || regex.test(isbnWords);
         });
       }
       return categoryMatch && priceMatch && authorMatch && yearMatch && searchMatch;
     })
     .sort((a, b) => {
+      const priceA = a.discountedPrice || a.price;
+      const priceB = b.discountedPrice || b.price;
       if (sortOption === "Price: Low to High") {
-        return a.price - b.price;
+        return priceA - priceB;
       } else if (sortOption === "Price: High to Low") {
-        return b.price - b.price;
+        return priceB - priceA;
       }
       return 0;
     });
@@ -152,6 +213,7 @@ export default function ProductPage() {
 
   return (
     <FavoritesProvider>
+      <ToastContainer position="top-right" autoClose={3000} /> {/* Added here */}
       <div className="min-h-screen bg-white">
         <div className="flex flex-col md:flex-row">
           <div className="w-full md:w-64 p-6 border-r border-gray-200">
@@ -181,7 +243,7 @@ export default function ProductPage() {
                 <input
                   type="range"
                   min="10"
-                  max="100"
+                  max={maxPrice}
                   value={priceRange}
                   onChange={(e) => {
                     setPriceRange(Number(e.target.value));
@@ -234,12 +296,12 @@ export default function ProductPage() {
                     <div key={author} className="flex items-center">
                       <input
                         type="checkbox"
-                        id={author.replace(/\s+/g, '-').toLowerCase()}
+                        id={author.replace(/\s+/g, "-").toLowerCase()}
                         checked={selectedAuthors.includes(author)}
                         onChange={() => handleAuthorChange(author)}
                         className="mr-2"
                       />
-                      <label htmlFor={author.replace(/\s+/g, '-').toLowerCase()}>
+                      <label htmlFor={author.replace(/\s+/g, "-").toLowerCase()}>
                         {author}
                       </label>
                     </div>
@@ -307,9 +369,7 @@ export default function ProductPage() {
 
               <div
                 className={`${
-                  view === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-4 gap-6"
-                    : "flex flex-col gap-4"
+                  view === "grid" ? "grid grid-cols-1 md:grid-cols-4 gap-6" : "flex flex-col gap-4"
                 } mb-8`}
               >
                 {currentProducts.length > 0 ? (
@@ -321,8 +381,11 @@ export default function ProductPage() {
                       author={book.author}
                       price={book.price}
                       imagePath={book.imagePath}
-                      isOnSale={book.isOnSale} // Pass isOnSale
-                      discountPercentage={book.discountPercentage} // Pass discountPercentage
+                      isOnSale={book.isOnSale}
+                      discountPercentage={book.discountPercentage}
+                      averageRating={book.averageRating}
+                      reviewCount={book.reviewCount}
+                      discountedPrice={book.discountedPrice}
                     />
                   ))
                 ) : (
