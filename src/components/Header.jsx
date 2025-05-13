@@ -199,7 +199,7 @@ const Header = () => {
                             className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition duration-300"
                             onClick={() => setDropdownOpen(false)}
                           >
-                            Admin Order
+                            View User Order
                           </Link>
                         )}
                         <button
