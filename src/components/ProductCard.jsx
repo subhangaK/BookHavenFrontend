@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { FaHeart, FaShoppingCart, FaStar } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const FavoritesContext = createContext();
 
@@ -73,7 +75,7 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
     e.stopPropagation();
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please log in to manage your wishlist");
+      toast.error("Please log in to manage your wishlist");
       navigate("/login");
       return;
     }
@@ -87,6 +89,7 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           },
         });
         toggleFavorite(id);
+        toast.success("Book removed from wishlist successfully!");
       } else {
         await axios.post(
           "https://localhost:7189/api/Wishlist/add",
@@ -100,19 +103,20 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           }
         );
         toggleFavorite(id);
+        toast.success("Book added to wishlist successfully!");
       }
     } catch (error) {
       console.error("Error updating wishlist:", error);
       if (error.response?.status === 404) {
-        alert("Book not found or not in wishlist.");
+        toast.error("Book not found or not in wishlist.");
       } else if (error.response?.status === 400) {
-        alert("Book already in wishlist or invalid request.");
+        toast.error("Book already in wishlist or invalid request.");
       } else if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        alert("Failed to update wishlist. Please try again.");
+        toast.error("Failed to update wishlist. Please try again.");
       }
     }
   };
@@ -121,7 +125,7 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
     e.stopPropagation();
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please log in to add items to your cart");
+      toast.error("Please log in to add items to your cart");
       navigate("/login");
       return;
     }
@@ -164,20 +168,20 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
           },
         }
       );
-      alert("Book added to cart successfully!");
+      toast.success("Book added to cart successfully!");
       navigate("/cart");
     } catch (error) {
       console.error("Error adding to cart:", error);
       if (error.response?.status === 404) {
-        alert("Book not found.");
+        toast.error("Book not found.");
       } else if (error.response?.status === 400) {
-        alert("Book already in cart or invalid request.");
+        toast.error("Book already in cart or invalid request.");
       } else if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
+        toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        alert("Failed to add book to cart. Please try again.");
+        toast.error("Failed to add book to cart. Please try again.");
       }
     }
   };
@@ -193,6 +197,14 @@ const ProductCard = ({ id, title, author, price, imagePath }) => {
       onMouseLeave={() => setIsHovered(false)}
       onClick={navigateToDetails}
     >
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnHover
+      />
       {/* Wishlist Button - Absolutely positioned */}
       <button
         onClick={handleToggleFavorite}
