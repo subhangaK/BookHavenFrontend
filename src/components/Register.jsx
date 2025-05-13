@@ -147,16 +147,6 @@ export default function RegisterPage() {
               </div>
               {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>}
             </div>
-
-            <div className="flex items-center justify-between text-sm mb-5 w-full">
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-1" {...register('rememberMe')} /> Remember Me
-              </label>
-              <Link to="#" className="text-blue-600 hover:underline">
-                Forgot Password?
-              </Link>
-            </div>
-
             <button
               type="submit"
               className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
@@ -164,24 +154,6 @@ export default function RegisterPage() {
               SIGN UP
             </button>
           </form>
-
-          <div className="flex items-center my-5 w-full">
-            <hr className="flex-grow border-t" />
-            <span className="mx-2 text-sm text-gray-500">Or sign up using</span>
-            <hr className="flex-grow border-t" />
-          </div>
-
-          <div className="flex justify-center space-x-5 text-lg mt-2">
-            <a href="#" aria-label="Instagram" className="flex items-center justify-center w-8 h-8 rounded-full">
-              <FaInstagram className="text-[#E1306C] hover:scale-110 transition-transform" />
-            </a>
-            <a href="#" aria-label="Facebook" className="flex items-center justify-center w-8 h-8 rounded-full">
-              <FaFacebookF className="text-[#1877F2] hover:scale-110 transition-transform" />
-            </a>
-            <a href="#" aria-label="Twitter" className="flex items-center justify-center w-8 h-8 rounded-full">
-              <FaTwitter className="text-[#1DA1F2] hover:scale-110 transition-transform" />
-            </a>
-          </div>
         </div>
 
         <div
