@@ -138,6 +138,11 @@ const Home = () => {
     navigate(`/books/${id}`);
   };
 
+  // Navigate to product page with pre-selected category
+  const navigateToCategory = (category) => {
+    navigate(`/productpage?category=${encodeURIComponent(category)}`);
+  };
+
   // Fetch banners and books on component mount
   useEffect(() => {
     fetchActiveBanners();
@@ -162,14 +167,25 @@ const Home = () => {
     const borderColor = type === "info" ? "border-blue-100" : "border-amber-200";
 
     return (
-      <div className={`${bgColor} ${borderColor} border rounded-lg p-4 flex justify-between items-center`}>
+      <div
+        className={`${bgColor} ${borderColor} border rounded-lg p-4 flex justify-between items-center`}
+      >
         <p className={`${textColor} font-medium`}>{message}</p>
-        <button 
+        <button
           onClick={onClose}
           className={`${textColor} hover:bg-opacity-10 hover:bg-gray-700 rounded-full p-1`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
           </svg>
         </button>
       </div>
@@ -195,13 +211,13 @@ const Home = () => {
                   Explore our carefully curated collection of books that inspire, educate, and transport you to new worlds.
                 </p>
                 <div className="flex flex-wrap gap-4">
-                  <button 
+                  <button
                     onClick={() => navigate("/productpage")}
                     className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300 shadow-sm"
                   >
                     Browse Collection
                   </button>
-                  <button 
+                  <button
                     onClick={() => navigate("/about")}
                     className="px-6 py-3 bg-transparent border border-blue-200 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors duration-300"
                   >
@@ -299,16 +315,16 @@ const Home = () => {
               <span className="border-b-2 border-blue-400 pb-1">Featured Books</span>
             </h2>
           </div>
-          
+
           {bookError && (
             <div className="bg-red-50 border border-red-100 rounded-lg p-4 mb-8">
               <p className="text-red-600">{bookError}</p>
             </div>
           )}
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {featuredBooks.map((book) => (
-              <div 
+              <div
                 key={book.id}
                 className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col cursor-pointer"
                 onClick={() => navigateToDetails(book.id)}
@@ -323,7 +339,7 @@ const Home = () => {
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                    <button 
+                    <button
                       className="w-full py-2 bg-white/90 text-gray-800 text-sm font-medium rounded"
                       onClick={(e) => e.stopPropagation()} // Prevent navigation when clicking Quick View
                     >
@@ -346,7 +362,7 @@ const Home = () => {
         {/* Book Sections with Horizontal Scroll */}
         {[
           { title: "Fiction", books: fictionBooks, ref: fictionRef },
-          { title: "Non-Fiction", books: nonFictionBooks, ref: nonFictionRef }
+          { title: "Non-Fiction", books: nonFictionBooks, ref: nonFictionRef },
         ].map((section) => (
           <section key={section.title} className="mb-16">
             <div className="flex items-center mb-8">
@@ -354,22 +370,31 @@ const Home = () => {
                 <span className="border-b-2 border-blue-400 pb-1">{section.title}</span>
               </h2>
             </div>
-            
+
             <div className="relative">
               <button
                 onClick={() => scrollLeft(section.ref)}
                 className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-md"
                 aria-label="Scroll left"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-gray-600"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
-              
+
               <div
                 ref={section.ref}
                 className="flex overflow-x-auto gap-6 py-4 px-2 hide-scrollbar snap-x"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
                 {section.books.map((book) => (
                   <div
@@ -397,14 +422,23 @@ const Home = () => {
                   </div>
                 ))}
               </div>
-              
+
               <button
                 onClick={() => scrollRight(section.ref)}
                 className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-md"
                 aria-label="Scroll right"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-gray-600"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
             </div>
@@ -420,22 +454,30 @@ const Home = () => {
             <div className="absolute bottom-0 left-0 transform -translate-x-1/3 translate-y-1/3">
               <div className="w-64 h-64 rounded-full bg-blue-100 opacity-50"></div>
             </div>
-            
+
             <div className="relative z-10 max-w-xl mx-auto text-center">
               <h2 className="text-3xl font-light text-gray-800 mb-6">
                 Discover Your Next Favorite Read
               </h2>
               <p className="text-gray-600 mb-8">
-                Our complete collection features thousands of titles across every genre. 
-                Find the perfect book for any occasion.
+                Our complete collection features thousands of titles across every genre. Find the perfect book for any occasion.
               </p>
               <button
                 onClick={handleBrowseAll}
                 className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300 shadow-sm inline-flex items-center"
               >
                 Browse Full Collection
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 ml-2"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
             </div>
@@ -449,13 +491,24 @@ const Home = () => {
               <span className="border-b-2 border-blue-400 pb-1">Staff Picks</span>
             </h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex">
               <div className="w-1/3">
                 <div className="h-full bg-blue-100 flex items-center justify-center p-6">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 text-blue-700"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    />
                   </svg>
                 </div>
               </div>
@@ -464,20 +517,43 @@ const Home = () => {
                 <p className="text-gray-600 text-sm mb-4">
                   Our librarians have curated a special collection of contemporary fiction that will transport you to new worlds.
                 </p>
-                <a href="#" className="text-blue-500 text-sm font-medium hover:text-blue-600 inline-flex items-center">
+                <button
+                  onClick={() => navigateToCategory("Fiction")}
+                  className="text-blue-500 text-sm font-medium hover:text-blue-600 inline-flex items-center"
+                >
                   View Collection
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-3 w-3 ml-1"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
-                </a>
+                </button>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex">
               <div className="w-1/3">
                 <div className="h-full bg-blue-100 flex items-center justify-center p-6">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 text-blue-700"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    />
                   </svg>
                 </div>
               </div>
@@ -486,12 +562,24 @@ const Home = () => {
                 <p className="text-gray-600 text-sm mb-4">
                   Expand your knowledge with our selection of thought-provoking non-fiction titles on science, history, and philosophy.
                 </p>
-                <a href="#" className="text-blue-500 text-sm font-medium hover:text-blue-600 inline-flex items-center">
+                <button
+                  onClick={() => navigateToCategory("Nonfiction")}
+                  className="text-blue-500 text-sm font-medium hover:text-blue-600 inline-flex items-center"
+                >
                   View Collection
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-3 w-3 ml-1"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
-                </a>
+                </button>
               </div>
             </div>
           </div>

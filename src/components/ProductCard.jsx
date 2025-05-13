@@ -2,8 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { FaHeart, FaShoppingCart, FaStar } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify"; // Removed ToastContainer import
 
 const FavoritesContext = createContext();
 
@@ -58,13 +57,23 @@ export const FavoritesProvider = ({ children }) => {
 
   return (
     <FavoritesContext.Provider value={{ favorites, toggleFavorite }}>
-      <ToastContainer position="top-right" autoClose={3000} />
       {children}
     </FavoritesContext.Provider>
   );
 };
 
-const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPercentage }) => {
+const ProductCard = ({
+  id,
+  title,
+  author,
+  price,
+  imagePath,
+  isOnSale,
+  discountPercentage,
+  averageRating = 0,
+  reviewCount = 0,
+  discountedPrice
+}) => {
   const { favorites, toggleFavorite } = useContext(FavoritesContext);
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
@@ -129,6 +138,14 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
     }
 
     try {
+      // Calculate final price
+      const finalPrice = isOnSale && discountedPrice !== null ? discountedPrice : price;
+      if (isNaN(finalPrice) || finalPrice <= 0) {
+        toast.error("Invalid price for this book.");
+        return;
+      }
+
+      // Check if book is already in an order
       const orderResponse = await axios.get("https://localhost:7189/api/Order", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -142,15 +159,19 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
         return;
       }
 
-      const isInOrder = orderResponse.data.some((order) => order.id === id);
+      // Check if book ID exists in order items
+      const isInOrder = orderResponse.data.some((order) =>
+        order.orderItems?.some((item) => item.bookId === Number(id))
+      );
       if (isInOrder) {
         toast.error("This book is already in an order and cannot be added to the cart.");
         return;
       }
 
+      // Add to cart with final price
       await axios.post(
         "https://localhost:7189/api/Cart/add",
-        { bookId: id },
+        { bookId: Number(id), quantity: 1, price: Number(finalPrice.toFixed(2)) },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -180,10 +201,6 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
   const navigateToDetails = () => {
     navigate(`/books/${id}`);
   };
-
-  const discountedPrice = isOnSale
-    ? (price * (1 - discountPercentage / 100)).toFixed(2)
-    : null;
 
   return (
     <div
@@ -220,6 +237,10 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
             className="w-full h-full object-cover transition-transform duration-300"
             style={{ transform: isHovered ? "scale(1.05)" : "scale(1)" }}
             loading="lazy"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "https://via.placeholder.com/150";
+            }}
           />
         ) : (
           <div className="h-full w-full bg-gray-200 flex items-center justify-center">
@@ -231,13 +252,18 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
       {/* Book Details */}
       <div className="p-4">
         {/* Rating stars */}
-        <div className="flex text-yellow-400 mb-2 items-center">
-          <FaStar />
-          <FaStar />
-          <FaStar />
-          <FaStar />
-          <FaStar className="text-gray-300" />
-          <span className="ml-1 text-xs text-gray-600">(4.0)</span>
+        <div className="flex items-center mb-2">
+          <div className="flex text-yellow-400 mr-2">
+            {[...Array(5)].map((_, i) => (
+              <FaStar
+                key={i}
+                className={i < Math.round(averageRating) ? "text-yellow-400" : "text-gray-300"}
+              />
+            ))}
+          </div>
+          <span className="text-xs text-gray-600">
+            {averageRating.toFixed(1)} ({reviewCount})
+          </span>
         </div>
 
         {/* Book Title */}
@@ -248,9 +274,9 @@ const ProductCard = ({ id, title, author, price, imagePath, isOnSale, discountPe
 
         {/* Price and Actions */}
         <div className="flex items-center justify-between mt-2">
-          {isOnSale ? (
+          {isOnSale && discountedPrice !== null ? (
             <>
-              <span className="text-lg font-bold text-red-600">${discountedPrice}</span>
+              <span className="text-lg font-bold text-red-600">${discountedPrice.toFixed(2)}</span>
               <span className="text-sm text-gray-500 line-through">${price.toFixed(2)}</span>
             </>
           ) : (
