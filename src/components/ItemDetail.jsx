@@ -20,7 +20,7 @@ export default function ItemDetails() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [userOrders, setUserOrders] = useState([]);
+  const [canReview, setCanReview] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -65,6 +65,39 @@ export default function ItemDetails() {
     } catch (err) {
       console.error("Review fetch error:", err);
       throw err;
+    }
+  };
+
+  // Check if user can review
+  const checkCanReview = async () => {
+    if (!token) return;
+    setOrdersLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}api/Review/can-review/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json"
+        }
+      });
+      setCanReview(response.data.canReview);
+    } catch (err) {
+      console.error("Can review check error:", err);
+      if (err.response?.status === 401) {
+        try {
+          const newToken = await refreshToken();
+          const response = await axios.get(`${API_BASE_URL}api/Review/can-review/${id}`, {
+            headers: {
+              Authorization: `Bearer ${newToken}`,
+              Accept: "application/json"
+            }
+          });
+          setCanReview(response.data.canReview);
+        } catch (refreshErr) {
+          console.error("Token refresh failed:", refreshErr);
+        }
+      }
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
@@ -113,33 +146,8 @@ export default function ItemDetails() {
       // Fetch reviews (public)
       await fetchReviews();
 
-      // Fetch user orders if authenticated (protected)
-      if (token) {
-        setOrdersLoading(true);
-        try {
-          let headers = { 
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`
-          };
-          
-          let response = await fetch(`${API_BASE_URL}api/Order`, { headers });
-          
-          if (response.status === 401) {
-            const newToken = await refreshToken();
-            headers.Authorization = `Bearer ${newToken}`;
-            response = await fetch(`${API_BASE_URL}api/Order`, { headers });
-          }
-
-          if (!response.ok) throw new Error(`Orders fetch failed: ${response.status} - ${response.statusText || 'Unknown error'}`);
-          
-          const ordersData = await response.json();
-          setUserOrders(ordersData || []);
-        } catch (err) {
-          console.error("Orders fetch error:", err);
-        } finally {
-          setOrdersLoading(false);
-        }
-      }
+      // Check if user can review
+      await checkCanReview();
     } catch (err) {
       if (err.message.includes("401") && retryCount < 2) {
         setRetryCount(c => c + 1);
@@ -155,60 +163,60 @@ export default function ItemDetails() {
 
   // Add to cart function
   const handleAddToCart = async () => {
-  if (!token) {
-    toast.error("Please log in to add items to your cart");
-    navigate("/login");
-    return;
-  }
+    if (!token) {
+      toast.error("Please log in to add items to your cart");
+      navigate("/login");
+      return;
+    }
 
-  if (!book.inStock) {
-    toast.error("This book is out of stock.");
-    return;
-  }
+    if (!book.inStock) {
+      toast.error("This book is out of stock.");
+      return;
+    }
 
-  try {
-    let currentToken = token;
-    let headers = {
-      Authorization: `Bearer ${currentToken}`,
-      "Content-Type": "application/json",
-      Accept: "*/*"
-    };
+    try {
+      let currentToken = token;
+      let headers = {
+        Authorization: `Bearer ${currentToken}`,
+        "Content-Type": "application/json",
+        Accept: "*/*"
+      };
 
-    // Add to cart directly
-    const response = await axios.post(
-      `${API_BASE_URL}api/Cart/add`,
-      { bookId: Number(id), quantity },
-      { headers }
-    );
-
-    // Handle unauthorized (refresh token and retry)
-    if (response.status === 401) {
-      currentToken = await refreshToken();
-      headers.Authorization = `Bearer ${currentToken}`;
-      await axios.post(
+      // Add to cart directly
+      const response = await axios.post(
         `${API_BASE_URL}api/Cart/add`,
         { bookId: Number(id), quantity },
         { headers }
       );
-    }
 
-    toast.success("Book added to cart successfully!");
-    setTimeout(() => navigate("/cart"), 1000);
-  } catch (error) {
-    console.error("Error adding to cart:", error);
-    if (error.response?.status === 404) {
-      toast.error("Book not found.");
-    } else if (error.response?.status === 400) {
-      toast.error("Book already in cart or invalid request.");
-    } else if (error.response?.status === 401) {
-      toast.error("Session expired. Please log in again.");
-      localStorage.removeItem("token");
-      navigate("/login");
-    } else {
-      toast.error("Failed to add book to cart. Please try again.");
+      // Handle unauthorized (refresh token and retry)
+      if (response.status === 401) {
+        currentToken = await refreshToken();
+        headers.Authorization = `Bearer ${currentToken}`;
+        await axios.post(
+          `${API_BASE_URL}api/Cart/add`,
+          { bookId: Number(id), quantity },
+          { headers }
+        );
+      }
+
+      toast.success("Book added to cart successfully!");
+      setTimeout(() => navigate("/cart"), 1000);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      if (error.response?.status === 404) {
+        toast.error("Book not found.");
+      } else if (error.response?.status === 400) {
+        toast.error("Book already in cart or invalid request.");
+      } else if (error.response?.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        toast.error("Failed to add book to cart. Please try again.");
+      }
     }
-  }
-};
+  };
 
   useEffect(() => {
     fetchData();
@@ -233,7 +241,8 @@ export default function ItemDetails() {
       let currentToken = token;
       let headers = {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${currentToken}`
+        Authorization: `Bearer ${currentToken}`,
+        Accept: "*/*"
       };
 
       // First attempt
@@ -262,11 +271,14 @@ export default function ItemDetails() {
       setShowReviewForm(false);
       setRating(0);
       setComment("");
+      setCanReview(false);
       toast.success("Review submitted successfully!");
     } catch (err) {
       if (err.response?.status === 401) {
         setSubmitError("Session expired. Please log in again.");
         toast.error("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
       } else {
         setSubmitError(err.response?.data?.message || "Failed to submit review");
         toast.error(err.response?.data?.message || "Failed to submit review");
@@ -276,11 +288,6 @@ export default function ItemDetails() {
       setSubmitLoading(false);
     }
   };
-
-  const numericId = Number(id);
-  const hasPurchased = userOrders.some(
-    order => order.id === numericId && order.isPurchased
-  );
 
   // Calculate discounted price
   const discountedPrice = book?.isOnSale && book?.discountPercentage > 0
@@ -294,7 +301,7 @@ export default function ItemDetails() {
   return (
     <div className="min-h-screen bg-white">
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-screen-xl mx-9 px-4 py-6">
         {/* Breadcrumb navigation */}
         <div className="flex items-center text-sm text-gray-500 mb-8">
           <a href="/" className="hover:text-blue-500">Home</a>
@@ -518,7 +525,7 @@ export default function ItemDetails() {
                   <h3 className="font-semibold">Customer Reviews</h3>
                   {ordersLoading ? (
                     <span className="text-gray-500">Checking purchase status...</span>
-                  ) : token && hasPurchased ? (
+                  ) : token && canReview ? (
                     <button
                       className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
                       onClick={() => setShowReviewForm(true)}

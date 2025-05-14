@@ -144,7 +144,7 @@ const Wishlist = () => {
 
   return (
     <FavoritesProvider>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen mx-36">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick pauseOnHover />
         <main className="container mx-auto py-8 px-4">
           <div className="flex items-center justify-between mb-8">

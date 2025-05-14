@@ -7,7 +7,6 @@ import {
   FaArrowLeft,
   FaHeart,
   FaLock,
-  FaTruck,
   FaPlus,
   FaMinus,
 } from "react-icons/fa";
@@ -58,16 +57,22 @@ const Checkout = () => {
           return;
         }
 
-        const fetchedCartBooks = cartResponse.data.map((book) => ({
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          price: book.price,
-          imagePath: book.imagePath,
-          quantity: book.quantity || 1,
-          isOnSale: book.isOnSale || (book.discountPercentage > 0), // Derive isOnSale if not provided
-          discountPercentage: book.discountPercentage || 0, // Base discount from sale
-        }));
+        console.log("Cart API response:", cartResponse.data); // Log the response for debugging
+
+        const fetchedCartBooks = cartResponse.data.map((book) => {
+          // Validate discountPercentage
+          const saleDiscount = book.isOnSale && book.discountPercentage > 0 ? book.discountPercentage / 100 : 0;
+          return {
+            id: book.id,
+            title: book.title,
+            author: book.author,
+            price: book.price,
+            imagePath: book.imagePath,
+            quantity: book.quantity || 1,
+            isOnSale: book.isOnSale || false,
+            saleDiscountPercentage: saleDiscount,
+          };
+        });
 
         // Fetch discount information
         const discountResponse = await axios.get(
@@ -93,6 +98,8 @@ const Checkout = () => {
           return;
         }
 
+        console.log("Discount API response:", discountResponse.data); // Log the response for debugging
+
         setDiscountData({
           orders: discountResponse.data.orders || [],
           purchaseDiscountPercentage:
@@ -102,7 +109,7 @@ const Checkout = () => {
             discountResponse.data.currentOrderBookCount || 0,
         });
 
-        // Update cartBooks with discount percentages
+        // Update cartBooks with the highest discount
         const updatedCartBooks = fetchedCartBooks.map((book) => {
           // Calculate quantity-based discount
           let quantityDiscount = 0;
@@ -112,14 +119,20 @@ const Checkout = () => {
             quantityDiscount = 0.05; // 5% for 5 or more books
           }
 
-          // Combine with the purchase-based discount (if applicable)
-          const totalDiscount =
-            quantityDiscount +
-            discountResponse.data.purchaseDiscountPercentage / 100;
+          // Get purchase-based discount
+          const purchaseDiscount = discountResponse.data.purchaseDiscountPercentage / 100;
+
+          // Get sale discount
+          const saleDiscount = book.saleDiscountPercentage;
+
+          // Select the highest discount
+          const highestDiscount = Math.max(quantityDiscount, purchaseDiscount, saleDiscount);
+
+          console.log(`Book ${book.title}: Quantity Discount=${quantityDiscount*100}%, Purchase Discount=${purchaseDiscount*100}%, Sale Discount=${saleDiscount*100}%, Highest=${highestDiscount*100}%`);
 
           return {
             ...book,
-            discountPercentage: totalDiscount,
+            discountPercentage: highestDiscount,
           };
         });
 
@@ -206,8 +219,12 @@ const Checkout = () => {
             } else if (newQuantity >= 5) {
               quantityDiscount = 0.05; // 5% for 5 or more books
             }
-            const totalDiscount =
-              quantityDiscount + discountData.purchaseDiscountPercentage / 100;
+            const totalDiscount = Math.max(
+              quantityDiscount,
+              discountData.purchaseDiscountPercentage / 100,
+              book.saleDiscountPercentage
+            );
+            console.log(`Updated Book ${book.title}: Quantity=${newQuantity}, Total Discount=${totalDiscount*100}%`);
             return {
               ...book,
               quantity: newQuantity,
@@ -296,11 +313,10 @@ const Checkout = () => {
       toast.success(
         `Book "${book.title}" added to order successfully! Bill and claim code sent to your email.`
       );
-      // Delay removeFromCart and navigation to allow toast to display
       setTimeout(async () => {
         await removeFromCart(book.id);
         navigate("/order");
-      }, 2000); // 1-second delay
+      }, 2000);
     } catch (error) {
       console.error(
         "Error adding to order:",
@@ -351,10 +367,9 @@ const Checkout = () => {
       toast.success(
         "All items ordered successfully! Bill and claim code sent to your email."
       );
-      // Delay navigation to allow toast to display
       setTimeout(() => {
         navigate("/order");
-      }, 2000); // 1-second delay
+      }, 2000);
     } catch (error) {
       console.error(
         "Error checking out all items:",
@@ -390,7 +405,7 @@ const Checkout = () => {
 
   return (
     <FavoritesProvider>
-      <div className="bg-gray-50 min-h-screen">
+      <div className="min-h-screen mx-36">
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -400,7 +415,7 @@ const Checkout = () => {
           pauseOnHover
         />
         <div className="bg-white border-b shadow-sm">
-          <div className="container mx-auto px-4 py-3">
+          <div className="container px-4 py-3">
             <nav className="flex text-sm">
               <Link to="/" className="text-gray-500 hover:text-indigo-600">
                 Home
@@ -411,7 +426,7 @@ const Checkout = () => {
           </div>
         </div>
 
-        <main className="container mx-auto py-8 px-4">
+        <main className="container py-8 px-4">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
               <FaShoppingCart className="text-indigo-600 mr-3" size={24} />
@@ -529,7 +544,7 @@ const Checkout = () => {
                                   <p className="text-sm text-green-600 mt-1">
                                     Discount:{" "}
                                     {(book.discountPercentage * 100).toFixed(0)}
-                                    % OFF
+                                    % OFF {book.isOnSale ? "(On Sale)" : ""}
                                   </p>
                                 )}
                               </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Home = () => {
   const [banners, setBanners] = useState([]);
@@ -11,21 +11,17 @@ const Home = () => {
   const [nonFictionBooks, setNonFictionBooks] = useState([]);
   const [bookError, setBookError] = useState("");
 
-  // Refs for scroll containers
   const featuredRef = useRef(null);
   const fictionRef = useRef(null);
   const nonFictionRef = useRef(null);
 
-  // Navigation
   const navigate = useNavigate();
 
-  // Helper function to get dismissed banner IDs from localStorage
   const getDismissedBanners = () => {
     const dismissed = localStorage.getItem("dismissedBanners");
     return dismissed ? JSON.parse(dismissed) : [];
   };
 
-  // Helper function to save dismissed banner IDs to localStorage
   const saveDismissedBanner = (bannerId) => {
     const dismissed = getDismissedBanners();
     if (!dismissed.includes(bannerId)) {
@@ -34,7 +30,6 @@ const Home = () => {
     }
   };
 
-  // Fetch active banners
   const fetchActiveBanners = async () => {
     setIsLoading(true);
     setBannerError("");
@@ -65,7 +60,6 @@ const Home = () => {
     }
   };
 
-  // Fetch all books and split into featured, fiction, and non-fiction
   const fetchBooks = async () => {
     try {
       const response = await fetch("https://localhost:7189/api/Auth/books");
@@ -74,7 +68,6 @@ const Home = () => {
       }
       const booksData = await response.json();
 
-      // Format books and handle ImagePath
       const formattedBooks = booksData.map((book) => {
         let imageUrl = book.imagePath;
         if (imageUrl && !imageUrl.startsWith("http")) {
@@ -94,7 +87,6 @@ const Home = () => {
         };
       });
 
-      // Split books into featured, fiction, and non-fiction
       const fiction = formattedBooks
         .filter((book) => book.category === "Fiction")
         .slice(0, 10);
@@ -115,7 +107,6 @@ const Home = () => {
     }
   };
 
-  // Scroll functions
   const scrollLeft = (ref) => {
     if (ref.current) {
       ref.current.scrollBy({ left: -300, behavior: "smooth" });
@@ -128,39 +119,35 @@ const Home = () => {
     }
   };
 
-  // Navigate to product page
   const handleBrowseAll = () => {
-    navigate("/productpage");
+    console.log("Navigating to /ProductPage via handleBrowseAll");
+    navigate("/ProductPage");
   };
 
-  // Navigate to book details page
   const navigateToDetails = (id) => {
+    console.log(`Navigating to /books/${id}`);
     navigate(`/books/${id}`);
   };
 
-  // Navigate to product page with pre-selected category
   const navigateToCategory = (category) => {
-    navigate(`/productpage?category=${encodeURIComponent(category)}`);
+    console.log(`Navigating to /ProductPage?category=${category}`);
+    navigate(`/ProductPage?category=${encodeURIComponent(category)}`);
   };
 
-  // Fetch banners and books on component mount
   useEffect(() => {
     fetchActiveBanners();
     fetchBooks();
   }, []);
 
-  // Handle banner close
   const handleCloseBanner = (id) => {
     saveDismissedBanner(id);
     setBanners(banners.filter((banner) => banner.id !== id));
   };
 
-  // Handle retry fetching banners
   const handleRetry = () => {
     fetchActiveBanners();
   };
 
-  // Banner component
   const Banner = ({ message, type, onClose }) => {
     const bgColor = type === "info" ? "bg-blue-50" : "bg-amber-50";
     const textColor = type === "info" ? "text-blue-600" : "text-amber-700";
@@ -194,13 +181,12 @@ const Home = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans">
-      {/* Hero Section */}
       <div className="relative overflow-hidden bg-white">
-        <div className="absolute inset-0 bg-[url('https://via.placeholder.com/20')] opacity-[0.03] bg-repeat"></div>
+        <div className="absolute inset-0 bg-[url('https://via.placeholder.com/20')] opacity-[0.03] bg-repeat pointer-events-none"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-20 md:py-28">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
+              <div className="relative z-10">
                 <span className="inline-block px-3 py-1 mb-6 text-xs font-medium tracking-wider text-blue-700 bg-blue-50 rounded-full">
                   A world of books awaits you
                 </span>
@@ -211,21 +197,21 @@ const Home = () => {
                   Explore our carefully curated collection of books that inspire, educate, and transport you to new worlds.
                 </p>
                 <div className="flex flex-wrap gap-4">
-                  <button
-                    onClick={() => navigate("/productpage")}
-                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300 shadow-sm"
+                  <Link
+                    to="/ProductPage"
+                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300 shadow-sm relative z-20 pointer-events-auto"
                   >
                     Browse Collection
-                  </button>
-                  <button
-                    onClick={() => navigate("/about")}
-                    className="px-6 py-3 bg-transparent border border-blue-200 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors duration-300"
+                  </Link>
+                  <Link
+                    to="/about-us"
+                    className="px-6 py-3 bg-transparent border border-blue-200 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors duration-300 relative z-20 pointer-events-auto"
                   >
                     About Us
-                  </button>
+                  </Link>
                 </div>
               </div>
-              <div className="hidden lg:block">
+              <div className="hidden lg:block relative z-0">
                 <div className="relative h-96 w-full">
                   <div className="absolute right-0 bottom-0 w-64 h-80 transform -rotate-6">
                     <div className="w-full h-full bg-blue-50 rounded-lg shadow-lg overflow-hidden">
@@ -270,9 +256,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Banners */}
         {isLoading && (
           <div className="mb-8">
             <div className="bg-gray-100 p-4 rounded-lg animate-pulse">
@@ -308,7 +292,6 @@ const Home = () => {
           </div>
         )}
 
-        {/* Featured Books */}
         <section className="mb-16">
           <div className="flex items-center mb-8">
             <h2 className="text-2xl font-light text-gray-800">
@@ -341,7 +324,7 @@ const Home = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                     <button
                       className="w-full py-2 bg-white/90 text-gray-800 text-sm font-medium rounded"
-                      onClick={(e) => e.stopPropagation()} // Prevent navigation when clicking Quick View
+                      onClick={(e) => e.stopPropagation()}
                     >
                       Quick View
                     </button>
@@ -359,7 +342,6 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Book Sections with Horizontal Scroll */}
         {[
           { title: "Fiction", books: fictionBooks, ref: fictionRef },
           { title: "Non-Fiction", books: nonFictionBooks, ref: nonFictionRef },
@@ -445,7 +427,6 @@ const Home = () => {
           </section>
         ))}
 
-        {/* Call to Action */}
         <section className="mb-16">
           <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-12">
             <div className="absolute top-0 right-0 transform translate-x-1/3 -translate-y-1/3">
@@ -484,7 +465,6 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Reading Recommendations */}
         <section className="mb-16">
           <div className="flex items-center mb-8">
             <h2 className="text-2xl font-light text-gray-800">
