@@ -184,6 +184,13 @@ const Header = () => {
                           >
                             Admin Banner
                           </Link>
+                           <Link 
+                            to="/admincontact" 
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition duration-300" 
+                            onClick={() => setDropdownOpen(false)}
+                          >
+                            Admin Contact
+                          </Link>
                         </>
                       )}
                       {roles.includes('Staff') && (
@@ -277,6 +284,14 @@ const Header = () => {
                 className="text-gray-600 hover:text-blue-500 pb-4 border-b-2 border-transparent hover:border-blue-500 transition-all duration-300"
               >
                 About Us
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/contact-us"
+                className="text-gray-600 hover:text-blue-500 pb-4 border-b-2 border-transparent hover:border-blue-500 transition-all duration-300"
+              >
+                Contact Us
               </Link>
             </li>
           </ul>

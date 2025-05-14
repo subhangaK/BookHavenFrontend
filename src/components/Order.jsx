@@ -65,36 +65,36 @@ const Order = () => {
         // Filter out cancelled or purchased orders for the current order section
         setOrderBooks(
           response.data.orders
-            .filter((book) => !book.isCancelled && !book.isPurchased)
-            .map((book) => ({
-              id: book.id,
-              title: book.title,
-              author: book.author,
-              price: book.price,
-              imagePath: book.imagePath,
-              discountPercentage: book.discountPercentage || 0,
-              claimCode: book.claimCode,
-              dateAdded: book.dateAdded,
-              quantity: book.quantity || book.Quantity || 1,
+            .filter((order) => !order.isCancelled && !order.isPurchased)
+            .map((order) => ({
+              id: order.id, // Use order ID
+              title: order.title,
+              author: order.author,
+              price: order.price,
+              imagePath: order.imagePath,
+              discountPercentage: order.discountPercentage || 0,
+              claimCode: order.claimCode,
+              dateAdded: order.dateAdded,
+              quantity: order.quantity || 1,
             }))
         );
 
         // Set order history for cancelled or purchased orders
         setOrderHistory(
           response.data.orders
-            .filter((book) => book.isCancelled || book.isPurchased)
-            .map((book) => ({
-              id: book.id,
-              title: book.title,
-              author: book.author,
-              price: book.price,
-              imagePath: book.imagePath,
-              discountPercentage: book.discountPercentage || 0,
-              claimCode: book.claimCode,
-              dateAdded: book.dateAdded,
-              isCancelled: book.isCancelled,
-              isPurchased: book.isPurchased,
-              quantity: book.quantity || book.Quantity || 1,
+            .filter((order) => order.isCancelled || order.isPurchased)
+            .map((order) => ({
+              id: order.id, // Use order ID
+              title: order.title,
+              author: order.author,
+              price: order.price,
+              imagePath: order.imagePath,
+              discountPercentage: order.discountPercentage || 0,
+              claimCode: order.claimCode,
+              dateAdded: order.dateAdded,
+              isCancelled: order.isCancelled,
+              isPurchased: order.isPurchased,
+              quantity: order.quantity || 1,
             }))
         );
       } catch (error) {
@@ -115,8 +115,7 @@ const Order = () => {
     fetchOrder();
   }, [navigate]);
 
-  const removeFromOrder = async (bookId) => {
-    // Show a toast notification indicating the item will be removed
+  const removeFromOrder = async (orderId) => {
     toast.info("Removing book from order...", {
       autoClose: 2000,
       onClose: async () => {
@@ -128,9 +127,71 @@ const Order = () => {
             return;
           }
 
-          // Use PATCH instead of DELETE
-          await axios.patch(
-            `https://localhost:7189/api/Order/cancel/${bookId}`,
+          // Use DELETE to remove the order
+          await axios.delete(
+            `https://localhost:7189/api/Order/remove/${orderId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "*/*",
+              },
+            }
+          );
+
+          // Update orderBooks and orderHistory
+          const orderToRemove = orderBooks.find((order) => order.id === orderId);
+          if (!orderToRemove) {
+            setError("Order not found in current order.");
+            return;
+          }
+
+          // Remove order from orderBooks and add to orderHistory as cancelled
+          setOrderBooks((prev) => prev.filter((order) => order.id !== orderId));
+          setOrderHistory((prev) => [
+            ...prev,
+            {
+              ...orderToRemove,
+              isCancelled: true,
+              quantity: orderToRemove.quantity, // Preserve quantity
+            },
+          ]);
+          toast.success("Book removed from order successfully!");
+        } catch (error) {
+          console.error("Error removing from order:", error);
+          if (error.response?.status === 401) {
+            setError("Session expired. Please log in again.");
+            localStorage.removeItem("token");
+            navigate("/login");
+          } else if (error.response?.status === 404) {
+            setError("Order not found.");
+          } else if (error.response?.status === 400) {
+            setError(
+              error.response.data?.message || "Order cannot be removed."
+            );
+          } else {
+            setError("Failed to remove book from order. Please try again.");
+          }
+          toast.error(error.response?.data?.message || "Failed to remove book.");
+        }
+      },
+    });
+  };
+
+  const cancelOrder = async (orderId) => {
+    toast.info("Cancelling order...", {
+      autoClose: 2000,
+      onClose: async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            setError("Please log in to manage your order");
+            navigate("/login");
+            return;
+          }
+
+          // Use PATCH to cancel the order
+          const response = await axios.patch(
+            `https://localhost:7189/api/Order/cancel/${orderId}`,
             {},
             {
               headers: {
@@ -141,27 +202,51 @@ const Order = () => {
           );
 
           // Update orderBooks and orderHistory
-          setOrderBooks((prev) => prev.filter((book) => book.id !== bookId));
-          setOrderHistory((prev) => [
-            ...prev,
-            ...orderBooks
-              .filter((book) => book.id === bookId)
-              .map((book) => ({ ...book, isCancelled: true })),
-          ]);
-          toast.success("Book removed from order successfully!");
+          const orderToCancel = orderBooks.find((order) => order.id === orderId);
+          if (!orderToCancel) {
+            setError("Order not found in current order.");
+            return;
+          }
+
+          if (response.data.quantity > 0) {
+            // Update quantity if still greater than 0
+            setOrderBooks((prev) =>
+              prev.map((order) =>
+                order.id === orderId
+                  ? { ...order, quantity: response.data.quantity }
+                  : order
+              )
+            );
+          } else {
+            // Remove order from orderBooks and add to orderHistory if fully cancelled
+            setOrderBooks((prev) => prev.filter((order) => order.id !== orderId));
+            setOrderHistory((prev) => [
+              ...prev,
+              {
+                ...orderToCancel,
+                isCancelled: true,
+                quantity: 0, // Set quantity to 0 for fully cancelled
+              },
+            ]);
+          }
+          toast.success("Order cancelled successfully!");
         } catch (error) {
-          console.error("Error removing from order:", error);
+          console.error("Error cancelling order:", error);
           if (error.response?.status === 401) {
             setError("Session expired. Please log in again.");
             localStorage.removeItem("token");
             navigate("/login");
           } else if (error.response?.status === 404) {
-            setError("Book not found in order.");
+            setError("Order not found.");
           } else if (error.response?.status === 400) {
-            setError(error.response.data || "Order is already cancelled.");
+            setError(
+              error.response.data?.message ||
+                "Order is already cancelled or cannot be modified."
+            );
           } else {
-            setError("Failed to remove book from order.");
+            setError("Failed to cancel order. Please try again.");
           }
+          toast.error(error.response?.data?.message || "Failed to cancel order.");
         }
       },
     });
@@ -176,7 +261,7 @@ const Order = () => {
   const orderHistoryTotalFormatted = orderHistoryTotal.toFixed(2);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -185,14 +270,14 @@ const Order = () => {
         closeOnClick
         pauseOnHover
       />
-      <main className="container mx-auto py-8 px-4">
+      <main className="container mx-9 max-w-screen-xl py-8 px-4">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center">
             <FaShoppingCart className="text-indigo-600 mr-3" size={24} />
             <h1 className="text-2xl font-bold text-gray-800">My Order</h1>
           </div>
           <Link
-            to="/books"
+            to="/ProductPage"
             className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium"
           >
             <FaStore className="mr-2" />
@@ -275,16 +360,16 @@ const Order = () => {
 
             {orderBooks.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {orderBooks.map((book) => (
+                {orderBooks.map((order) => (
                   <div
-                    key={book.id}
+                    key={order.id}
                     className="bg-white rounded-lg shadow-sm border overflow-hidden"
                   >
                     <div className="relative h-48 overflow-hidden bg-gray-100">
-                      {book.imagePath ? (
+                      {order.imagePath ? (
                         <img
-                          src={`https://localhost:7189${book.imagePath}`}
-                          alt={book.title}
+                          src={`https://localhost:7189${order.imagePath}`}
+                          alt={order.title}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -293,58 +378,57 @@ const Order = () => {
                         </div>
                       )}
                       <button
-                        onClick={() => removeFromOrder(book.id)}
+                        onClick={() => cancelOrder(order.id)}
                         className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm hover:bg-red-50 transition-colors"
-                        title="Remove from order"
+                        title="Cancel order"
                       >
                         <FaTrashAlt className="text-red-500" size={16} />
                       </button>
-                      {book.discountPercentage > 0 && (
+                      {order.discountPercentage > 0 && (
                         <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold py-1 px-2 rounded">
-                          {(book.discountPercentage * 100).toFixed(0)}% OFF
+                          {(order.discountPercentage * 100).toFixed(0)}% OFF
                         </div>
                       )}
                     </div>
 
                     <div className="p-4">
-                      <Link to={`/books/${book.id}`} className="block">
+                      <Link to={`/books/${order.id}`} className="block">
                         <h3 className="font-medium text-gray-900 mb-1 hover:text-indigo-600 transition-colors line-clamp-1">
-                          {book.title}
+                          {order.title}
                         </h3>
                       </Link>
                       <p className="text-sm text-gray-500 mb-1">
-                        by {book.author}
+                        by {order.author}
                       </p>
                       <p className="text-sm text-gray-500 mb-1">
-                        Claim Code: {book.claimCode}
+                        Claim Code: {order.claimCode}
                       </p>
                       <p className="text-sm text-gray-500 mb-1">
-                        Quantity: {book.quantity}
+                        Quantity: {order.quantity}
                       </p>
                       <p className="text-sm text-gray-500 mb-3">
                         Ordered on:{" "}
-                        {new Date(book.dateAdded).toLocaleDateString()}
+                        {new Date(order.dateAdded).toLocaleDateString()}
                       </p>
-
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-baseline">
-                          {book.discountPercentage > 0 ? (
+                          {order.discountPercentage > 0 ? (
                             <>
                               <span className="text-lg font-bold text-gray-900">
                                 $
                                 {(
-                                  book.price *
-                                  book.quantity *
-                                  (1 - book.discountPercentage)
+                                  order.price *
+                                  order.quantity *
+                                  (1 - order.discountPercentage)
                                 ).toFixed(2)}
                               </span>
                               <span className="text-sm text-gray-500 line-through ml-2">
-                                ${(book.price * book.quantity).toFixed(2)}
+                                ${(order.price * order.quantity).toFixed(2)}
                               </span>
                             </>
                           ) : (
                             <span className="text-lg font-bold text-gray-900">
-                              ${(book.price * book.quantity).toFixed(2)}
+                              ${(order.price * order.quantity).toFixed(2)}
                             </span>
                           )}
                         </div>

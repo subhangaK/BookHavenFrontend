@@ -99,194 +99,194 @@ const ContactUs = () => {
   };
 
   return (
-    <div>
-      {/* Hero Section */}
-      <div className="text-center py-12 bg-gray-100">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">Contact Us</h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          We're here to help you with any questions, recommendations, or support
-          you may need. Reach out to our friendly team today!
-        </p>
-      </div>
+   <div>
+  {/* Hero Section */}
+  <div className="text-center py-12 bg-gray-100">
+    <h1 className="text-4xl font-bold text-gray-800 mb-4">Contact Us</h1>
+    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+      We're here to help you with any questions, recommendations, or support
+      you may need. Reach out to our friendly team today!
+    </p>
+  </div>
 
-      {/* Contact Content */}
-      <div className="container mx-auto px-4 pb-16">
-        <div className="grid md:grid-cols-2 gap-12">
-          {/* Contact Information */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              Contact Information
-            </h2>
+  {/* Contact Content */}
+  <div className="container mx-36 max-w-screen-xl pb-16 pr-18">
+    <div className="grid md:grid-cols-2 gap-12">
+      {/* Contact Information */}
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          Contact Information
+        </h2>
 
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
-                  <FaMapMarkerAlt className="text-2xl" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Our Bookstore</h3>
-                  <p className="text-gray-600">Balaju, Kathmandu, Nepal</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
-                  <FaPhoneAlt className="text-2xl" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Customer Support
-                  </h3>
-                  <p className="text-gray-600">+977 9827262555</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
-                  <FaEnvelope className="text-2xl" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Email Support</h3>
-                  <p className="text-gray-600">support@bookhaven.com</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
-                  <FaBook className="text-2xl" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Business Hours
-                  </h3>
-                  <p className="text-gray-600">Monday - Saturday: 10am - 8pm</p>
-                </div>
-              </div>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
+              <FaMapMarkerAlt className="text-2xl" />
             </div>
-
-            {/* Social Media Links */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
-                Connect with Us
-              </h3>
-              <div className="flex justify-center space-x-6">
-                <a
-                  href="#"
-                  className="text-pink-600 hover:text-pink-700 transition duration-300"
-                >
-                  <FaInstagram className="text-3xl" />
-                </a>
-                <a
-                  href="#"
-                  className="text-blue-700 hover:text-blue-800 transition duration-300"
-                >
-                  <FaFacebook className="text-3xl" />
-                </a>
-                <a
-                  href="#"
-                  className="text-blue-400 hover:text-blue-500 transition duration-300"
-                >
-                  <FaTwitter className="text-3xl" />
-                </a>
-              </div>
+            <div>
+              <h3 className="font-semibold text-gray-800">Our Bookstore</h3>
+              <p className="text-gray-600">Balaju, Kathmandu, Nepal</p>
             </div>
           </div>
 
-          {/* Contact Form */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-              Send Us a Message
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Your Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
-                />
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
+              <FaPhoneAlt className="text-2xl" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-800">
+                Customer Support
+              </h3>
+              <p className="text-gray-600">+977 9827262555</p>
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
-                />
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
+              <FaEnvelope className="text-2xl" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-800">Email Support</h3>
+              <p className="text-gray-600">support@bookhaven.com</p>
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isSubmitting}
-                  placeholder="Enter the subject of your message"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
-                />
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-100 text-blue-600 p-3 rounded-full">
+              <FaBook className="text-2xl" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-800">
+                Business Hours
+              </h3>
+              <p className="text-gray-600">Monday - Saturday: 10am - 8pm</p>
+            </div>
+          </div>
+        </div>
 
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Your Message
-                </label>
-                <textarea
-                  name="message"
-                  value={formData.message}
-                  onChange={handleInputChange}
-                  rows="5"
-                  required
-                  disabled={isSubmitting}
-                  placeholder="Write your message here..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300 resize-none"
-                ></textarea>
-              </div>
-
-              {formStatus.message && (
-                <div
-                  className={`text-center p-3 rounded-lg ${
-                    formStatus.type === "success"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {formStatus.message}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition duration-300 shadow-md hover:shadow-lg flex items-center justify-center ${
-                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
-                {isSubmitting ? "Sending..." : "Send Message"}
-                <FaChevronRight className="ml-2" />
-              </button>
-            </form>
+        {/* Social Media Links */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+            Connect with Us
+          </h3>
+          <div className="flex justify-center space-x-6">
+            <a
+              href="#"
+              className="text-pink-600 hover:text-pink-700 transition duration-300"
+            >
+              <FaInstagram className="text-3xl" />
+            </a>
+            <a
+              href="#"
+              className="text-blue-700 hover:text-blue-800 transition duration-300"
+            >
+              <FaFacebook className="text-3xl" />
+            </a>
+            <a
+              href="#"
+              className="text-blue-400 hover:text-blue-500 transition duration-300"
+            >
+              <FaTwitter className="text-3xl" />
+            </a>
           </div>
         </div>
       </div>
+
+      {/* Contact Form */}
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+          Send Us a Message
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              Your Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+              disabled={isSubmitting}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              disabled={isSubmitting}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              Subject
+            </label>
+            <input
+              type="text"
+              name="subject"
+              value={formData.subject}
+              onChange={handleInputChange}
+              required
+              disabled={isSubmitting}
+              placeholder="Enter the subject of your message"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              Your Message
+            </label>
+            <textarea
+              name="message"
+              value={formData.message}
+              onChange={handleInputChange}
+              rows="5"
+              required
+              disabled={isSubmitting}
+              placeholder="Write your message here..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300 resize-none"
+            ></textarea>
+          </div>
+
+          {formStatus.message && (
+            <div
+              className={`text-center p-3 rounded-lg ${
+                formStatus.type === "success"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {formStatus.message}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition duration-300 shadow-md hover:shadow-lg flex items-center justify-center ${
+              isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            {isSubmitting ? "Sending..." : "Send Message"}
+            <FaChevronRight className="ml-2" />
+          </button>
+        </form>
+      </div>
     </div>
+  </div>
+</div>
   );
 };
 

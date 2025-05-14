@@ -214,7 +214,7 @@ export default function ProductPage() {
   return (
     <FavoritesProvider>
       <ToastContainer position="top-right" autoClose={3000} /> {/* Added here */}
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white mx-36">
         <div className="flex flex-col md:flex-row">
           <div className="w-full md:w-64 p-6 border-r border-gray-200">
             <div className="mb-8">
